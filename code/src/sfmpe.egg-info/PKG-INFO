@@ -1,0 +1,6 @@
+Metadata-Version: 2.4
+Name: sfmpe
+Version: 0.1.0
+Summary: Sequential Flow Matching for Simulation-Based Inference
+Requires-Dist: torch
+Requires-Dist: torchdiffeq

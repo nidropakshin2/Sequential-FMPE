@@ -1,0 +1,374 @@
+\documentclass{beamer}
+
+% \input{dep/preamble.tex}
+
+\usetheme{Madrid}
+\usepackage[utf8]{inputenc}
+\usepackage[russian]{babel}
+\usepackage{amsmath, amssymb, bm}
+\usepackage{animate}
+\usepackage{graphicx}
+
+\title{Flow Matching. Quick Tour}
+\author{}
+\date{}
+
+\DeclareMathOperator{\argmin}{argmin}
+
+\begin{document}
+
+\frame{\titlepage}
+
+%------------------------------------------------
+\section{Основные идеи}
+
+%------------------------------------------------
+\begin{frame}{Постановка задачи генерации}
+
+Пусть:
+\begin{itemize}
+    \item $p_0(x)$ — простое распределение (например, $\mathcal N(0,I)$),
+    \item $p_1(x)$ — целевое распределение данных.
+\end{itemize}
+Задача: построить диффеоморфизм
+\[
+\psi_1 : \mathbb R^d \to \mathbb R^d,
+\]
+такой что
+\[
+p_1(x) = [\psi_1]_\# p_0 (x) = p_0(\psi_1^{-1}(x)) |\partial_x \psi_1^{-1}(x)|
+\]
+
+Т.е. $X_1 = \psi_1(X_0) \sim p_1 \iff X_0 \sim p_0$ 
+
+\end{frame}
+
+\begin{frame}{Постановка задачи генерации}
+
+Вместо прямого построения $\psi_1$ рассматриваем поток
+\[
+\frac{d}{dt}\psi_t(x) = v_t(\psi_t(x)), \quad t \in [0,1].
+\]
+Из которого отображение $\psi_1$ восстанавливается интегрированием
+\[
+\psi_1(x) = p_0(x) + \int_0^{1} v_t(\psi_t(x)) dt
+\]
+\end{frame}
+
+%------------------------------------------------
+\begin{frame}{Поток и уравнение непрерывности}
+
+Если $\psi_t$ удовлетворяет
+\[
+\frac{d}{dt}\psi_t(x) = v_t(\psi_t(x)),
+\]
+то плотность $p_t = [\psi_t]_\# p_0 (x)$ удовлетворяет уравнению непрерывности:
+\[
+\partial_t p_t(x) + \nabla \cdot \big(p_t(x) v_t(x)\big) = 0.
+\]
+
+Тогда, если мы найдём правильное $v_t$, то $\psi_t$ \textit{хорошим образом} перенесёт $p_0$ в $p_1$
+
+\end{frame}
+
+\begin{frame}
+    \begin{figure}
+        \centering
+        \animategraphics[loop, autoplay, width=0.8\linewidth]{30}{anim/FM/frame_}{0001}{0150}
+    \end{figure}
+\end{frame}
+
+
+
+%------------------------------------------------
+\begin{frame}{Ключевая идея FM}
+
+Вместо обучения напрямую распределения $q_\theta(x) \approx p_1(x)$ через KL-дивергенцию,
+Flow Matching предлагает:
+
+\medskip
+\begin{enumerate}
+    \item Задать интерполирующее распределение $p_t$ между $p_0$ и $p_1$
+    \item Вычислить соответствующее \textit{истинное} поле скоростей $u_t(x)$.
+    \item Обучать модель $v_\theta$ по регрессии:
+\end{enumerate}
+
+\[
+\mathcal L_{\text{FM}} =
+\mathbb E_{t \sim U[0,1],\, x \sim p_t}
+\| v_t^\theta(x) - u_t(x) \|^2.
+\]
+
+\end{frame}
+
+\begin{frame}
+    
+    \centering
+    \begin{tabular}{c c}
+        \includegraphics[width=0.35\linewidth]{images/data.jpeg} & \includegraphics[width=0.35\linewidth]{images/path_design.jpeg} \\
+        \includegraphics[width=0.35\linewidth]{images/training.jpeg} & \includegraphics[width=0.35\linewidth]{images/sampling.jpeg} \\
+    \end{tabular}
+    
+    Проблема лишь в том, что \textit{истинное} поле $u_t(x)$ нам обычно неизвестно
+\end{frame}
+
+
+
+%------------------------------------------------
+\section{От conditional к marginal loss}
+
+%------------------------------------------------
+\begin{frame}{Условная формулировка}
+
+Вместо работы с маргинальным $u_t(x)$ вводится
+
+\[
+u_t(x \mid z),
+\]
+
+где $z$ — латентная случайная величина (например, пара $z = (x_0, x_1) \sim \pi_{0, 1} $).
+
+Тогда условный лосс:
+\[
+\mathcal L_{\text{cond}} =
+\mathbb E_{t,z,x_t \sim p_{1|z}(\cdot \mid z)}
+\| v_t^\theta(x_t) - u_t(x_t \mid z) \|^2.
+\]
+
+Это легко сэмплировать:
+\begin{enumerate}
+    \item берём $z$,
+    \item генерируем $x_t \sim p_{1 | z}$,
+    \item знаем $u_t(x_t \mid z)$ аналитически.
+\end{enumerate}
+
+Тогда истинное поле выражается как
+
+\[
+u_t(x)
+=
+\mathbb{E}_{z \sim \pi} \big[
+u_t(X_t \mid z) \mid X_t = x
+\big].
+\]
+
+\end{frame}
+
+%------------------------------------------------
+\begin{frame}{Пример: линейная интерполяция}
+
+Простейший случай:
+
+\begin{itemize}
+    \item $p_0(x) = \mathcal N(\mu_0, \sigma_0)$
+    \item $p_1(x) = \mathcal N(\mu_1, \sigma_1)$
+    \item $\psi_{t \mid 1}(x \mid x_1) = t x_1 + (1 - t) x$
+\end{itemize}
+
+Тогда условное поле скоростей:
+\[
+u_{t \mid 1}(x \mid x_1) = \dot{\psi}_{t \mid 1} \circ \psi_{t \mid 1}^{-1}(x \mid x_1) = \frac{x_1 - x}{1 - t}
+\]
+
+И условный probability path:
+
+\[
+p_{t \mid 1} (x \mid x_1) = p_{0 \mid 1} (\psi_{t \mid 1}^{-1}(x \mid x_1)) | \partial_x\psi_{t \mid 1}^{-1}(x \mid x_1) | = 
+\]
+\[
+= \frac{1}{\sqrt{2 \pi} \sigma} e^{-\frac{1}{2} \Big( \frac{\frac{x - t x_1}{1 - t} - \mu_0}{\sigma_0} \Big)^2} \cdot \frac{1}{1 - t} = 
+\mathcal N(t x_1 + (1 - t)\mu_0, (1 - t)\sigma_0)
+\]
+
+\end{frame}
+
+\begin{frame}{Пример: линейная интерполяция}
+    Тогда marginal probability path:
+    \[
+    p_t(x) = \int p_{t \mid 1}(x | x_1) p_1(x_1) dx_1 = 
+    \]
+    \[
+    = \int \mathcal N(t x_1 + (1 - t)\mu_0, (1 - t)\sigma_0) \> \mathcal N(\mu_1, \sigma_1) dx_1 =
+    \]
+    \[
+    = \mathcal{N}(t \mu_1 + (1 - t) \mu_0, t^2 \sigma_1 + (1 - t) \sigma_0)
+    \]
+    Отсюда по формуле Байеса 
+    \[
+    p_{1 \mid t}(x_1 \mid x) = \frac{p_{t \mid 1}(x \mid x_1) p_1(x_1)}{p_t(x)} = \mathcal N(\mu_{1 | t}(x), \sigma_{1|t}(x))
+    \]
+    где
+    \[
+    \mu_{1 \mid t}(x) = \mu_1 + \frac{t \sigma_1 (x - t\mu_1 - (1 - t)\mu_0)}{t^2 \sigma_1 + (1 - t)\sigma_0}
+    \]
+    \[
+    \sigma_{1 \mid t}(x) = \frac{\sigma_1 (1 - t) \sigma_0}{t^2 \sigma_1 + (1 - t)\sigma_0}
+    \]
+\end{frame}
+
+\begin{frame}
+    Итого, marginal velocity field:
+    \[
+    u_t(x) = \int u_{t \mid 1}(x \mid x_1) p_{1 \mid t}(x_1 \mid x) dx_1 = 
+    \]
+    \[
+    = \mathbb{E}\Big[\frac{X_1 - X_t}{1 - t} \mid X_t = x\Big] = \frac{1}{1 - t}\mathbb{E}[X_1 \mid X_t = x] - \frac{x}{1 - t} =
+    \]
+    \[
+    = \frac{\mu_{1 | t}(x) - x}{1 - t}
+    \]
+\end{frame}
+
+\begin{frame}
+    
+    \centering
+    \begin{tabular}{c c}
+        \includegraphics[width=0.3\linewidth]{images/cond_path.jpeg} & \includegraphics[width=0.3\linewidth]{images/marg_path.jpeg} \\
+        \small{$\mathcal{N}(t x_1 + (1 - t)\mu_0, (1 - t)\sigma_0)$} & \small{$\mathcal{N} (t \mu_1 + (1 - t) \mu_0, t^2 \sigma_1 + (1 - t) \sigma_0)$} \\
+        \includegraphics[width=0.3\linewidth]{images/cond_vel.jpeg} & \includegraphics[width=0.3\linewidth]{images/marg_vel.jpeg} \\
+        \Large{$\frac{x_1 - x}{1 - t}$} & \Large{$\frac{\mu_{1 | t}(x) - x}{1 - t}$} \\
+    \end{tabular}
+
+\end{frame}
+
+% \begin{frame}
+%     \begin{figure}
+%         \centering
+%         \animategraphics[loop, autoplay, width=0.8\linewidth]{30}{anim/CFM/frame_}{0001}{0150}
+%     \end{figure}
+% \end{frame}
+
+
+%------------------------------------------------
+\begin{frame}{Теорема о совпадении лоссов}
+
+\begin{block}{Теорема}
+
+Градиент условного лосса совпадает
+с градиентом маргинального лосса:
+
+\[
+\nabla_\theta \mathcal L_{\text{cond}}
+=
+\nabla_\theta \mathcal L_{\text{marg}},
+\]
+
+где
+
+\[
+\mathcal L_{\text{cond}} =
+\mathbb E_{t,Z \sim \pi, X_t \sim p_{1 | Z}}
+\| v_t^\theta(X_t) - u_t(X_t|Z) \|^2.
+\]
+
+\[
+\mathcal L_{\text{marg}}
+=
+\mathbb E_{t, X_t \sim p_t}
+\| v_t^\theta(X_t) - u_t(X_t) \|^2
+\]
+
+\end{block}
+
+\end{frame}
+
+\begin{frame}{Доказательство}
+    \begin{align*}
+        \nabla_\theta \mathcal L_{\text{marg}} 
+        & = \nabla_\theta \mathbb{E}_{t,X_t} \| v_t^\theta(X_t) - u_t(X_t) \|^2 \\
+        & = \mathbb{E}_{t,X_t} \nabla_\theta \| v_t^\theta(X_t) - u_t(X_t) \|^2 \\
+        & = \mathbb{E}_{t,X_t} \textcolor{blue}{\nabla_\theta v_t^\theta(X_t) \nabla_{v_t^\theta}} \| v_t^\theta(X_t) - u_t(X_t) \|^2 \\
+        & = \mathbb{E}_{t,X_t} \nabla_\theta v_t^\theta(X_t) \nabla_{v_t^\theta} \| v_t^\theta(X_t) - \textcolor{blue}{\mathbb{E}_{Z \sim p_{Z | t}} [ u_t(X_t \mid Z)]} \|^2 \\
+        & = \mathbb{E}_{t,X_t} \textcolor{blue}{\mathbb{E}_{Z \sim p_{Z | t}}} \nabla_\theta v_t^\theta(X_t) \nabla_{v_t^\theta} \| v_t^\theta(X_t) - u_t(X_t \mid Z) \|^2 \\
+        & = \mathbb{E}_{t,X_t} \textcolor{blue}{\mathbb{E}_{Z \sim p_{Z | t}}} \nabla_\theta \| v_t^\theta(X_t) - u_t(X_t \mid Z) \|^2 \\
+        & = \mathbb{E}_{t, \textcolor{blue}{X_t \sim p_{t|Z}, Z \sim \pi}} \nabla_\theta \| v_t^\theta(X_t) - u_t(X_t \mid Z) \|^2 \\
+        & = \nabla_\theta \mathbb{E}_{t, X_t \sim p_{t|Z}, Z \sim \pi} \| v_t^\theta(X_t) - u_t(X_t \mid Z) \|^2 \\
+        & = \nabla_\theta \mathcal{L}_{\text{cond}} 
+    \end{align*}
+
+\end{frame}
+
+
+
+%------------------------------------------------
+% \begin{frame}{Главная идея доказательства}
+
+% Рассмотрим разложение:
+
+% \[
+% u_t(x|z)
+% =
+% u_t(x)
+% +
+% \varepsilon,
+% \]
+
+% где
+
+% \[
+% \mathbb E[\varepsilon \mid x] = 0.
+% \]
+
+% Тогда:
+
+% \[
+% \|v - u_t(x|z)\|^2
+% =
+% \|v - u_t(x)\|^2
+% +
+% \|\varepsilon\|^2
+% +
+% 2\langle v-u_t(x), \varepsilon \rangle.
+% \]
+
+% После взятия условного ожидания:
+
+% \[
+% \mathbb E[\langle v-u_t(x), \varepsilon \rangle \mid x] = 0.
+% \]
+
+% \end{frame}
+
+%------------------------------------------------
+\begin{frame}{Следствие}
+
+Получаем:
+
+\[
+\mathcal L_{\text{cond}}
+=
+\mathcal L_{\text{marg}}
++
+\text{const}.
+\]
+
+Т.е. их $\argmin$ совпадают, итого: 
+
+\begin{block}{Следствие}
+    Зная только \textbf{условное} поле скоростей, мы можем выучить \textbf{истинное}
+\end{block}
+
+\end{frame}
+
+\begin{frame}
+
+    \centering
+    \includegraphics[width=\linewidth]{images/fm_scheme.jpeg}
+
+\end{frame}
+
+
+%------------------------------------------------
+\begin{frame}{Итог}
+
+Flow Matching:
+
+\begin{itemize}
+    \item хорошая лосс-функция (в отличие от KL-дивергенции)
+    \item позволяет обучать настоящий поток через условный
+    \item ODE солвер используется только на этапе семплирования, но не обучения
+\end{itemize}
+\end{frame}
+
+%------------------------------------------------
+\end{document}

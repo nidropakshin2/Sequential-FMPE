@@ -1,0 +1,254 @@
+\documentclass{beamer}
+\usetheme{Madrid}
+\usepackage[utf8]{inputenc}
+\usepackage[T2A]{fontenc}
+\usepackage[russian]{babel}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{movie15}
+
+
+\title{Sampling methods}
+\author{Urakov Mikhail}
+\date{\today}
+
+\begin{document}
+
+\begin{frame}
+    \titlepage
+\end{frame}
+
+\begin{frame}{Содержание}
+    \tableofcontents
+\end{frame}
+
+\section{Постановка задачи сэмплирования}
+
+\begin{frame}{Постановка задачи сэмплирования}
+    \begin{block}{Основная задача}
+        Генерация случайных выборок из заданного распределения вероятностей $p(x)$
+    \end{block}
+    
+    \begin{itemize}
+        \item Дано: распределение $p(x)$ (возможно ненормированное)
+        \item Найти: алгоритм генерации $\{x_i\}_{i=1}^N \sim p(x) $
+        \item Применение: Монте-Карло методы, байесовский вывод, машинное обучение
+    \end{itemize}
+    
+    \begin{equation*}
+        \mathbb{E}_{p(x)}[f(x)] \approx \frac{1}{N}\sum_{i=1}^N f(x_i)
+    \end{equation*}
+\end{frame}
+
+\section{Мотивация}
+
+\begin{frame}{Мотивация}
+    \begin{columns}[T]
+        \begin{column}{0.48\textwidth}
+            \begin{block}{Почему сэмплирование важно?}
+                \begin{itemize}
+                    \item Численное интегрирование
+                    \item Байесовская статистика
+                    \item Обучение генеративных моделей
+                    \item Оптимизация
+                    \item Физическое моделирование
+                \end{itemize}
+            \end{block}
+        \end{column}
+        
+        \begin{column}{0.48\textwidth}
+            \begin{block}{Типичные применения}
+                \begin{itemize}
+                    \item MCMC методы
+                    \item Вариационные автоэнкодеры
+                    \item Байесовские нейросети
+                    \item Reinforcement Learning
+                    \item Computational physics
+                \end{itemize}
+            \end{block}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\section{Простые методы сэмплирования}
+
+\begin{frame}{Преобразование Смирнова}
+    \begin{theorem}[Преобразование Смирнова]
+        Если $U \sim \text{Uniform}(0,1)$ и $F$ - функция распределения, то
+        $X = F^{-1}(U)$ имеет распределение с функцией распределения $F$.
+    \end{theorem}
+    
+    \begin{block}{Алгоритм}
+        \begin{enumerate}
+            \item Сгенерировать $u \sim U(0,1)$
+            \item Вычислить $x = F^{-1}(u)$
+            \item Вернуть $x$
+        \end{enumerate}
+    \end{block}
+    
+    \begin{example}
+        Экспоненциальное распределение: $F(x) = 1 - e^{-\lambda x}
+        \Rightarrow x = -\frac{\ln(1-u)}{\lambda}$
+    \end{example}
+\end{frame}
+
+\begin{frame}{Преобразование Смирнова}
+    \begin{tabular}{c | c}
+        \begin{figure}
+            \centering
+            \includegraphics[width=0.5\linewidth]{images/Inverse_transformation_method_for_exponential_distribution.jpg}
+        \end{figure}
+         & 
+        \begin{figure}
+        \includemovie{3cm}{3cm}{images/Inverse_Transform_Sampling_Example.gif}
+        \caption{Inverse Transform Sampling from Gaussian}
+    \end{figure}
+    \end{tabular}
+\end{frame}
+
+\begin{frame}{Сэмплирование из равномерного распределения на множестве}
+    \begin{block}{Задача}
+        Сгенерировать точку равномерно из множества $A \subset \mathbb{R}^d$
+    \end{block}
+    
+    \begin{columns}[T]
+        \begin{column}{0.48\textwidth}
+            \textbf{Методы:}
+            \begin{itemize}
+                \item Отбор с отклонением (rejection)
+                \item MCMC (Markov Chain Monte Carlo)
+                \item Случайное блуждание
+                \item Grid sampling
+            \end{itemize}
+        \end{column}
+        
+        \begin{column}{0.48\textwidth}
+            \textbf{Примеры множеств:}
+            \begin{itemize}
+                \item Сфера/шар
+                \item Симплекс
+                \item Выпуклые многогранники
+                \item Многообразия
+            \end{itemize}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{Сэмплирование из подграфика плотности}
+    \begin{block}{Идея метода}
+        Рассмотрим подграфик плотности:
+        \[G = \{(x,y): 0 \leq y \leq p(x)\}\]
+        Если $(X,Y)$ равномерно распределена в $G$, то $X \sim p(x)$
+    \end{block}
+    
+    \begin{columns}[T]
+        \begin{column}{0.58\textwidth}
+            \textbf{Алгоритм:}
+            \begin{enumerate}
+                \item Выбрать область $[a,b] \times [0,M]$
+                \item Генерировать $(x,y)$ равномерно
+                \item Если $y \leq p(x)$, принять $x$
+                \item Иначе повторить
+            \end{enumerate}
+        \end{column}
+        
+        \begin{column}{0.38\textwidth}
+            \begin{figure}
+                \centering
+                \includegraphics[width=\textwidth]{example-image} % Заменить на реальное изображение
+                \caption{Подграфик плотности}
+            \end{figure}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\section{Rejection Sampling}
+
+\begin{frame}{Rejection Sampling}
+    \begin{block}{Основная идея}
+        Использование proposal distribution $q(x)$ для генерации кандидатов
+    \end{block}
+    
+    \textbf{Алгоритм:}
+    \begin{enumerate}
+        \item Выбрать $q(x)$ и константу $M$ такие, что $p(x) \leq Mq(x)$
+        \item Сгенерировать $x \sim q(x)$
+        \item Сгенерировать $u \sim U(0,1)$
+        \item Если $u \leq \frac{p(x)}{Mq(x)}$, принять $x$
+        \item Иначе вернуться к шагу 2
+    \end{enumerate}
+    
+    \begin{block}{Эффективность}
+        Вероятность принятия: $\frac{1}{M}$
+        $$\text{Стараться минимизировать } M = \sup_x \frac{p(x)}{q(x)}$$
+    \end{block}
+\end{frame}
+
+\section{Importance Sampling}
+
+\begin{frame}{Importance Sampling}
+    \begin{block}{Основная идея}
+        Оценка матожидания через взвешенные samples из proposal distribution
+    \end{block}
+    
+    \begin{equation*}
+        \mathbb{E}_{p(x)}[f(x)] = \mathbb{E}_{q(x)}\left[f(x)\frac{p(x)}{q(x)}\right]
+    \end{equation*}
+    
+    \textbf{Алгоритм:}
+    \begin{enumerate}
+        \item Выбрать proposal distribution $q(x)$
+        \item Сгенерировать $\{x_i\}_{i=1}^N \sim q(x)$
+        \item Вычислить веса $w_i = \frac{p(x_i)}{q(x_i)}$
+        \item Нормировать веса: $\tilde{w}_i = \frac{w_i}{\sum_j w_j}$
+        \item Оценка: $\hat{\mathbb{E}}[f(x)] = \sum_{i=1}^N \tilde{w}_i f(x_i)$
+    \end{enumerate}
+\end{frame}
+
+\begin{frame}{Сравнение методов}
+    \begin{table}
+        \centering
+        \begin{tabular}{lccc}
+            \toprule
+            Метод & Простота & Эффективность & Применимость \\
+            \midrule
+            Смирнова & Высокая & Высокая & Ограниченная \\
+            Rejection & Средняя & Переменная & Широкая \\
+            Importance & Средняя & Переменная & Очень широкая \\
+            \bottomrule
+        \end{tabular}
+        \caption{Сравнение методов сэмплирования}
+    \end{table}
+    
+    \begin{block}{Ключевые моменты}
+        \begin{itemize}
+            \item Выбор метода зависит от задачи и распределения
+            \item Rejection sampling требует знания верхней границы
+            \item Importance sampling может иметь большую дисперсию
+            \item Для сложных распределений используются MCMC методы
+        \end{itemize}
+    \end{block}
+\end{frame}
+
+\begin{frame}{Заключение}
+    \begin{block}{Основные выводы}
+        \begin{itemize}
+            \item Сэмплирование - фундаментальная задача в статистике и ML
+            \item Простые методы работают для простых распределений
+            \item Для сложных случаев нужны продвинутые методы (MCMC, VI)
+            \item Правильный выбор proposal distribution критически важен
+        \end{itemize}
+    \end{block}
+    
+    \begin{block}{Дальнейшее изучение}
+        \begin{itemize}
+            \item Markov Chain Monte Carlo (MCMC)
+            \item Variational Inference
+            \item Normalizing Flows
+            \item Diffusion Models
+        \end{itemize}
+    \end{block}
+\end{frame}
+
+\end{document}

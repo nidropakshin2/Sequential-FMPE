@@ -1,0 +1,133 @@
+\documentclass{beamer}
+\usepackage{amsmath, amssymb}
+
+\title{Derivation of the Continuity Equation from Pushforward Measures}
+\author{}
+\date{}
+
+\input{dep/preamble.tex}
+
+\begin{document}
+
+\frame{\titlepage}
+
+%------------------------------------------------
+
+\begin{frame}{Setup}
+Let $\psi_t : \mathbb{R}^d \to \mathbb{R}^d$ be the flow of the ODE
+\[
+\frac{d}{dt} \psi_t(x) = u_t(\psi_t(x)),
+\qquad \psi_0(x) = x.
+\]
+
+Let $\rho_0$ be the initial density.
+
+Define the time-evolved density as the pushforward:
+\[
+\rho_t (y) = (\psi_t)_\# \rho_0 (y) = \rho_0(\psi_t^{-1}(y)) | \Det \partial_y \psi_t^{-1}(y)|
+\]
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}{Pushforward Definition}
+By definition of pushforward:
+\[
+\int \varphi(y)\,\rho_t(y)\,dy
+=
+\int \varphi(\psi_t(x))\,\rho_0(x)\,dx
+\quad \forall \varphi \in C_c^\infty.
+\]
+
+All time dependence enters through $\psi_t$.
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}{Differentiating in Time}
+Differentiate both sides with respect to $t$:
+
+\[
+\frac{d}{dt}
+\int \varphi(\psi_t(x))\,\rho_0(x)\,dx
+=
+\int
+\frac{d}{dt}\varphi(\psi_t(x))\,\rho_0(x)\,dx.
+\]
+
+Using the chain rule:
+\[
+\frac{d}{dt}\varphi(\psi_t(x))
+=
+\nabla \varphi(\psi_t(x)) \cdot \dot{\psi}_t(x).
+\]
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}{Using the ODE}
+Since
+\[
+\dot{\psi}_t(x) = u_t(\psi_t(x)),
+\]
+we obtain:
+\[
+=
+\int
+\nabla \varphi(\psi_t(x)) \cdot u_t(\psi_t(x))\,\rho_0(x)\,dx.
+\]
+
+Using pushforward again:
+\[
+=
+\int
+\nabla \varphi(y) \cdot u_t(y)\,\rho_t(y)\,dy.
+\]
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}{Integration by Parts}
+Integrate by parts:
+
+\[
+\int
+\nabla \varphi \cdot u_t \rho_t
+=
+-
+\int
+\varphi \, \nabla \cdot (\rho_t u_t).
+\]
+
+Hence:
+\[
+\frac{d}{dt}
+\int \varphi \rho_t
++
+\int
+\varphi \, \nabla \cdot (\rho_t u_t)
+=
+0.
+\]
+
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}{Weak Continuity Equation}
+Since this holds for all test functions $\varphi$,
+
+\[
+\partial_t \rho_t + \nabla \cdot (\rho_t u_t) = 0
+\]
+
+in the weak sense.
+
+\end{frame}
+
+%------------------------------------------------
+
+\end{document}
