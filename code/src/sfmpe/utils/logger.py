@@ -157,7 +157,7 @@ def get_default_logger() -> Logger:
     return Logger(
         name="sfmpe",
         log_level=Logger.INFO,
-        log_to_file=True,
+        log_to_file=False,
         log_to_console=True
     )
 

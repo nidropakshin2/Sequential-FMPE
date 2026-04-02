@@ -46,7 +46,7 @@ def test_demonstrate_logger():
         name="file_logger",
         level=Logger.INFO,
         log_to_file=True,
-        log_file_path="./code/tests/logs/test_example.log"
+        log_file_path=f"{os.path.dirname(__file__)}/logs/test_example.log"
     )
     file_logger.info("This message goes to both console and file")
     file_logger.info(f"Log file: {file_logger.get_log_file_path()}")

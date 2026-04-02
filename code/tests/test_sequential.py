@@ -15,6 +15,7 @@ def sir_task():
     device = 'cpu'
     return SIRTask(config, device)
 
+
 def test_sir_config_structure():
     config_path = './code/tests/test_configs/sir_config.yaml'
     with open(config_path) as f:

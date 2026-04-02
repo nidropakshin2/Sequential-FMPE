@@ -1,5 +1,8 @@
-*.runner
-*.exe
-*.gitverse
-*.vscode
+literature
+.gitverse
+.vscode
 code/.pytest_cache
+code/tests/__pycache__
+code/tests/test_models/*
+code/tests/logs/*
+*/__pycache__/*
