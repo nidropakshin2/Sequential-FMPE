@@ -26,7 +26,7 @@ class RoundManager:
         self.proposal_params = proposal_params
         self.device = device
         
-        # Initialize logger
+        
         if logger is None:
             self.logger = self.task.logger
             self.estimator.logger = self.logger

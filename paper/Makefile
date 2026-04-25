@@ -1,9 +1,10 @@
-OUT_NAME = main
+SRC_NAME = term
+# OUT_NAME = main
 
 all: build clean
 
 build:
-	latexmk -pdf -cd -time -verbose src/main.tex
+	latexmk -pdf -cd -time -verbose src/$(SRC_NAME).tex
 clean: build
 # 	latexmk -cd -c $(PAPER_PATH)/src/main.tex 
-	mv "src/main.pdf" "$(OUT_NAME).pdf"
+	mv "src/$(SRC_NAME).pdf" "$(SRC_NAME).pdf"
