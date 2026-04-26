@@ -4,12 +4,7 @@ version = "0.1.0"
 description = "Sequential Flow Matching for Simulation-Based Inference"
 dependencies = [
     "torch",
-    "torchdiffeq",
-    "abc",
-    "os",
-    "typing",
-    "logging",
-    "sys",
+    "torchdiffeq"
 ]
 
 [build-system]
