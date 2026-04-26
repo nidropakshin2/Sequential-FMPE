@@ -8,7 +8,7 @@ from sfmpe.data.round_dataset import RoundDataset
 from sfmpe.core.distributions import Distribution
 from sfmpe.flow.sampler import ODESampler
 from sfmpe.inference.sequential.proposal import Proposal, ProposalParams
-from sfmpe.utils.logger import Logger
+from sfmpe.utils.logger import Logger, get_default_logger
 
 
 class FlowMatchingEstimator:
@@ -22,7 +22,10 @@ class FlowMatchingEstimator:
         self.flow_model = flow_model
         self.optimizer = optimizer
         self.loss_fn = loss_fn
-        self.logger = logger
+        if logger is None:
+            self.logger = get_default_logger()
+        else:
+            self.logger = logger
         if dataset_prepocessor is None:
             self.dataset_prepocessor = lambda theta, x, *args: (theta, x)
         else:
@@ -58,29 +61,29 @@ class FlowMatchingEstimator:
             
             theta_1, x = self.dataset_prepocessor(dataset.theta, dataset.x) 
             if check_nan(theta_1, "dataset theta_1"):
-                return -1
+                raise ValueError("Captured None")
             if check_nan(x, "dataset x"):
-                return -1
+                raise ValueError("Captured None")
             theta_0 = self.flow_model.init_dist.sample(theta_1.shape).to(self.device)
             if check_nan(theta_0, "theta_0"):
-                return -1
+                raise ValueError("Captured None")
 
             t = self.flow_model.path.time_dist.sample((*theta_0.shape[:-1], 1))
             if check_nan(t, "t"):
-                return -1
+                raise ValueError("Captured None")
             theta_t = self.flow_model.path.sample(theta_0, theta_1, t)
             if check_nan(theta_t, "theta_t"):
-                return -1
+                raise ValueError("Captured None")
             dtheta_t = self.flow_model.path.velocity(theta_0, theta_1)
             if check_nan(dtheta_t, "dtheta_t"):
-                return -1
+                raise ValueError("Captured None")
 
             v = self.flow_model.velocity_model(t=t, theta=theta_t, x=x)
             if check_nan(v, "v"):
-                return -1
+                raise ValueError("Captured None")
             loss = self.loss_fn(v, dtheta_t)
             if check_nan(loss, "loss"):
-                return -1
+                raise ValueError("Captured None")
             loss_stats.append(loss.detach().item())
 
             if loss < min_loss and self.path is not None:
@@ -96,7 +99,7 @@ class FlowMatchingEstimator:
             self.optimizer.zero_grad()
             loss.backward()
             self.optimizer.step()
-        
+            
         return loss_stats
 
     def load(self):

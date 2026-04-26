@@ -47,7 +47,7 @@ class StochVolPrior(Distribution):
 
         return torch.cat([mu, phi, sigma, m], dim=-1).to(device)
 
-    def log_prob(self, x: torch.Tensor) -> torch.Tensor:
+    def log_prob(self, value: torch.Tensor, **kwargs) -> torch.Tensor:
         raise NotImplementedError("log_prob() method is not implemented for StochVol model")
 
 
@@ -76,7 +76,7 @@ class StochVolSimulator(Simulator):
         v = torch.zeros(batch_shape, device=theta.device) + v0
 
         for t in range(T):
-            stdev = torch.exp(v / 2.0)
+            stdev = torch.clamp(torch.exp(v / 2.0), max=100)
             x[..., t] = mu + stdev * torch.randn(*batch_shape, device=theta.device)
             v = m + phi * (v - m) + sigma * torch.randn(*batch_shape, device=theta.device)
 
@@ -113,6 +113,19 @@ class StochVolTask(Task):
         self.summary_parameters = config["summary"]
         self.logger_config = config.get("logger")
         super().__init__(device=device)
+
+        def check_support(theta):
+            # clamp_min = torch.log(torch.tensor([sir_task.prior.beta_range[0] + sir_task.prior.gamma_range[0], sir_task.prior.gamma_range[0]]))
+            # clamp_max = torch.tensor([sir_task.prior.beta_range[1], sir_task.prior.gamma_range[1]])
+            clamp_min = torch.tensor([self.prior_parameters[parameter][0] for parameter in self.prior_parameters.keys()])
+            clamp_max = torch.tensor([self.prior_parameters[parameter][1] for parameter in self.prior_parameters.keys()])
+            # WARNING: проблемы с размерностями
+            mask = (theta >= clamp_min) & (theta <= clamp_max)
+            while len(mask.shape) > 1:
+                mask = mask.all(dim=-1)
+            return mask
+
+        self.check_support = check_support
 
         self.theta_dim = 4
         self.data_dim = self.summary.emb_dim

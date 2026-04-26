@@ -166,12 +166,20 @@ class SIRTask(Task):
         self.summary_parameters = config["summary"]
         self.logger_config = config.get("logger")
         super().__init__(device=device)
+
+        def check_support(theta):
+            # clamp_min = torch.log(torch.tensor([sir_task.prior.beta_range[0] + sir_task.prior.gamma_range[0], sir_task.prior.gamma_range[0]]))
+            # clamp_max = torch.tensor([sir_task.prior.beta_range[1], sir_task.prior.gamma_range[1]])
+            clamp_min = torch.tensor([0.025, 0.05])
+            clamp_max = torch.tensor([2.5, 0.5])
+            return (theta >= clamp_min) & (theta <= clamp_max) 
+
+        self.check_support = check_support
         
         self.theta_dim = 2
         self.data_dim = self.summary.emb_dim
     
     def build_prior(self):
-        
         return SIRPrior(gamma_range=self.prior_paramters["gamma_range"],
                         beta_range=self.prior_paramters["beta_range"])
 

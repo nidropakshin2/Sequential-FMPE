@@ -14,3 +14,8 @@ def r2_score(y_true, y_pred):
     ss_res = torch.sum((y_true - y_pred) ** 2)
     r2 = 1 - (ss_res / ss_tot)
     return r2
+
+
+class Validator:
+    def __init__(self):
+        pass

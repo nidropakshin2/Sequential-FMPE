@@ -23,11 +23,15 @@ class ODESampler:
 
     def sample(self, x_0, n_steps=32, **kwargs) -> torch.Tensor:
         # WARNING: возможны проблемы с размерностями
+        theta_dim = kwargs.get("theta_dim", None)
+        if theta_dim is None:
+            raise ValueError("theta_dim cannot be None")
+        
         self.flow_model.velocity_model.eval()
         self.flow_model.velocity_model.to(x_0.device)
 
         # WARNING: проблема откуда взять размерность для теты
-        theta_0 = self.flow_model.init_dist.sample((*x_0.shape[:-1], 2)).to(x_0.device)
+        theta_0 = self.flow_model.init_dist.sample((*x_0.shape[:-1], theta_dim)).to(x_0.device)
 
         t = torch.linspace(0, 1, steps=n_steps + 1).to(x_0.device)
         

@@ -6,3 +6,4 @@ configs*
 logs*
 tutorial.ipynb
 bench.ipynb
+stochvol.py

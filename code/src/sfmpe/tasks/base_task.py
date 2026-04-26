@@ -14,6 +14,7 @@ class Task(ABC):
         self.device = device
 
         self.prior = self.build_prior()
+        self.check_support = None
         self.simulator = self.build_simulator()
         self.summary = self.build_summary()
         self.logger = self.build_logger()
@@ -58,3 +59,6 @@ class Task(ABC):
         x = self.summarize(x)
 
         return theta, x
+    
+    # -------- convenience --------
+    

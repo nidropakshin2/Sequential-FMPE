@@ -9,6 +9,8 @@ class SimpleVelocityField(nn.Module):
             nn.Linear(1 + theta_dim + x_dim, hidden_dim), nn.ReLU(),
             nn.Linear(hidden_dim, hidden_dim), nn.ReLU(),
             nn.Linear(hidden_dim, hidden_dim), nn.ReLU(),
+            nn.Linear(hidden_dim, hidden_dim), nn.ReLU(),
+            nn.Linear(hidden_dim, hidden_dim), nn.ReLU(),
             nn.Linear(hidden_dim, theta_dim),
         )
 
@@ -25,5 +27,5 @@ class SimpleVelocityField(nn.Module):
         
         t_mid = (t_end + t_start) / 2
         theta_mid = theta + self.forward(t=t_start, theta=theta, x=x) * (t_mid - t_start)
-        return theta + self.forward(t=t_mid, theta=theta_mid, x=x) * (t_end - t_start)
+        return theta + self.forward(t=t_mid, theta=theta_mid, x=x) * (t_end - t_mid)
 

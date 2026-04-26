@@ -12,6 +12,7 @@ class ProposalParams:
         n_steps: None | int, steps of ODESampler
     """
     method: None | str 
+    theta_dim: int
     x_0: None | torch.Tensor 
     weight: None | float = 0.5
     n_steps: int = 8
@@ -29,8 +30,10 @@ class Proposal(Distribution):
         if self.params.method == "NPE-A": 
             x_0 = self.params.x_0
             # TODO: проблемы с размерностями
+            # print(x_0.shape, size)
             x_0 = x_0.unsqueeze(0).expand(*size, *x_0.shape)
-            return self.sampler.sample(x_0=x_0, n_steps=self.params.n_steps)
+            # print(x_0.shape)
+            return self.sampler.sample(x_0=x_0, n_steps=self.params.n_steps, theta_dim=self.params.theta_dim)
 
         elif self.params.method == 'NPE-B':
             return NotImplementedError(f"Method {self.params.method} is not implemented") # type: ignore
