@@ -1,5 +1,4 @@
 import torch
-import numpy as np
 
 from sfmpe.core.distributions import Distribution
 from sfmpe.core.simulator import Simulator
