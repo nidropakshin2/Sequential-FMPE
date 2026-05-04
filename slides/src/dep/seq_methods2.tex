@@ -1,0 +1,260 @@
+\documentclass[10pt,aspectratio=169]{beamer}
+\usepackage[T2A]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[russian]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{bm}
+
+\usetheme{Madrid}
+\usecolortheme{default}
+
+\title{Sequential Neural Posterior Estimation. Resume.}
+\subtitle{SNPE-A, SNPE-B, SNPE-C (APT), Truncated SNPE}
+\date{\today}
+
+\begin{document}
+
+\frame{\titlepage}
+
+\begin{frame}{Содержание}
+\tableofcontents
+\end{frame}
+
+\section{Постановка задачи и общая схема}
+
+\begin{frame}{Последовательное уточнение апостериора}
+    Цель: оценить $p(\theta \mid x_o) \propto p(\theta)\,p(x_o\mid\theta)$, имея только симулятор $p(x\mid\theta)$.
+    \vspace{0.3cm}
+    
+    Общая схема Sequential NPE (раунд $r$):
+    \begin{enumerate}
+        \item Строим proposal $\tilde{p}_r(\theta)$ (обычно текущая оценка апостериора).
+        \item Генерируем датасет: $\theta_i \sim \tilde{p}_r(\theta),\; x_i \sim p(x\mid\theta_i)$.
+        \item Обучаем модель $q_\phi(\theta \mid x)$ на этих данных.
+    \end{enumerate}
+    \pause
+    Проблема: без коррекции $q_\phi(\theta \mid x)$ будет приближать $\tilde{p}_r(\theta \mid x)$, а не истинный апостериор $p(\theta \mid x)$.
+\end{frame}
+
+\begin{frame}{Почему возникает смещение}
+    Истинное апостериорное распределение:
+    \[
+    p(\theta \mid x) = \frac{p(\theta)p(x\mid\theta)}{p(x)}
+    \]
+    Условное распределение при сэмплировании из $\tilde{p}$:
+    \[
+    \tilde{p}(\theta \mid x) = \frac{\tilde{p}(\theta)p(x\mid\theta)}{\tilde{p}(x)}
+    \]
+    \pause
+    Отношение:
+    \[
+    p(\theta \mid x) \; \propto \; \tilde{p}(\theta \mid x)\,\frac{p(\theta) \tilde{p}(x)}{\tilde{p}(\theta) p(x)}
+    \]
+    \vspace{0.2cm}
+    Необходимо компенсировать фактор $\frac{p(\theta) \tilde{p}(x)}{\tilde{p}(\theta) p(x)}$
+\end{frame}
+
+\begin{frame}{Почему возникает смещение}
+
+    \begin{figure}
+        \centering
+        \includegraphics[width=0.5\textwidth]{images/rejection.png}
+    \end{figure}
+    
+\end{frame}
+
+\section{SNPE-A (Papamakarios \& Murray, 2016)}
+
+\begin{frame}{Идея SNPE-A}
+    \begin{itemize}
+        \item Модель: смесь гауссиан (MDN)
+        \item Proposal $\tilde{p}(\theta)$ — также смесь гауссиан
+        \item Коррекция выполняется \textbf{после} обучения, аналитическим пересчётом компонент MDN
+    \end{itemize}
+    \pause
+    \textbf{Обучение:} минимизация KL-дивергенции относительно $\tilde{p}$:
+    \[
+    \mathcal{L}(\phi) = -\mathbb{E}_{\theta,x\sim\tilde{p}(\theta)p(x\mid\theta)}\bigl[\log q_\phi(\theta\mid x)\bigr]
+    \]
+    После обучения $q_\phi(\theta\mid x) \approx \tilde{p}(\theta\mid x)$.
+    \pause
+    
+    \textbf{Коррекция:} для нового $x_o$ компоненты смеси $q_\phi$ домножаются на $\frac{p(\theta)}{\tilde{p}(\theta)}$ и перенормируются, давая $p(\theta\mid x_o)$. Аналитическая формула возможна только для смесей гауссиан
+\end{frame}
+
+\begin{frame}{Преимущества и недостатки SNPE-A}
+    \begin{block}{Преимущества}
+        \begin{itemize}
+            \item Простота реализации
+            \item Нет проблем с высокой дисперсией весов
+        \end{itemize}
+    \end{block}
+    \pause
+    \begin{block}{Недостатки}
+        \begin{itemize}
+            \item Жёсткое ограничение: и $\tilde{p}$, и $q_\phi$ должны быть смесями гауссиан
+            \item Негибкость для сложных многомодальных апостериоров
+            \item Не подходит для моделей вроде нормализующих потоков
+        \end{itemize}
+    \end{block}
+\end{frame}
+
+\section{SNPE-B (Lueckmann et al., 2017)}
+
+\begin{frame}{Идея SNPE-B}
+    Использование importance weighting прямо в функции потерь:
+    \[
+    \mathcal{L}(\phi) = -\mathbb{E}_{\theta,x\sim\tilde{p}(\theta)p(x\mid\theta)}\left[ \frac{p(\theta)}{\tilde{p}(\theta)} \log q_\phi(\theta\mid x) \right]
+    \]
+    \pause
+    \textbf{Обоснование:} минимизация этого среднего (с точностью до константы) эквивалентна минимизации расстояния до истинного апостериора, т.к.
+    \[
+    \tilde{p}(\theta)p(x\mid\theta) \cdot \frac{p(\theta)}{\tilde{p}(\theta)} = p(\theta)p(x\mid\theta) \propto p(\theta\mid x).
+    \]
+    \pause
+    \begin{itemize}
+        \item Допускает произвольные параметрические модели $q_\phi$ (не только смеси гауссиан)
+        \item Требует вычисления плотности $\tilde{p}(\theta)$ (proposal) и $p(\theta)$
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Преимущества и недостатки SNPE-B}
+    \begin{block}{Преимущества}
+        \begin{itemize}
+            \item Гибкость: можно использовать любую модель для вычисления плотности (нормализующие потоки и пр.)
+        \end{itemize}
+    \end{block}
+    \pause
+    \begin{block}{Недостатки}
+        \begin{itemize}
+            \item Веса $w(\theta) = p(\theta)/\tilde{p}(\theta)$ могут иметь огромную дисперсию, особенно на ранних раундах
+            \item Нестабильность обучения, медленная сходимость
+        \end{itemize}
+    \end{block}
+\end{frame}
+
+\section{SNPE-C (APT, Greenberg et al., 2019)}
+
+\begin{frame}{APT}
+    \begin{itemize}
+        \item Не использует ни плотность proposal, ни importance weights
+        \item Строит вспомогательную задачу классификации ``правильная $\theta$ для данного $x$''
+    \end{itemize}
+    \pause
+    Для батча $\{(\theta_k, x_k)\}_{k=1}^K$, где $\theta_k\sim\tilde{p}(\theta)$, $x_k\sim p(x\mid\theta_k)$:
+    % \[
+    % \mathcal{L}(\phi) = -\frac1K\sum_{k=1}^K \log\frac{\exp\bigl(\log q_\phi(\theta_k\mid x_k)\bigr)}{\sum_{j=1}^K \exp\bigl(\log q_\phi(\theta_j\mid x_k)\bigr)}
+    % \]
+    \[
+    \mathcal{L}(\phi) = -\frac{1}{K}\sum_{k=1}^K \log \tilde{q}_\phi (\theta_k \mid x_k) = -\frac{1}{K}\sum_{k=1}^K \log\frac{\frac{q_\phi (\theta_k \mid x_k)}{p(\theta_k)}}{\sum_{j = 1}^{K} \frac{q_\phi (\theta_j \mid x_j)}{p(\theta_j)}}
+    \]
+\end{frame}
+
+\begin{frame}{Свойства APT}
+    \textbf{Интерпретация:} в такой дискретной постановке сеть буквально учится отвечать на вопрос "какой из этих $\theta$ сгенерировал этот $x$?". 
+    Ответом явлется распределение $\tilde{q}_\phi$ 
+    \pause
+    \begin{itemize}
+        \item Никаких явных плотностей proposal (только значения $q_\phi$)
+        \item Совместим с любыми параметризациями, где можно вычислить $\log q_\phi(\theta\mid x)$
+    \end{itemize}
+    \pause
+    \begin{block}{Ограничение}
+        \begin{itemize}
+            \item Может страдать от \textbf{``утечки'' (leakage)}: апостериор ``вытекает'' за пределы априора, особенно на ранних раундах
+        \end{itemize}
+    \end{block}
+\end{frame}
+
+\begin{frame}{Преимущества и недостатки APT}
+    \begin{block}{Преимущества}
+        \begin{itemize}
+            \item Нет проблем с дисперсией весов
+            \item Не требуется плотность $\tilde{p}(\theta)$, что позволяет легко менять proposal
+            \item Хорошо работает с современными архитектурами
+        \end{itemize}
+    \end{block}
+    \pause
+    \begin{block}{Недостатки}
+        \begin{itemize}
+            \item Требует вычисления $\log q_\phi(\theta\mid x)$ (для FMPE – дорого)
+            \item Leakage: может потребоваться дополнительная регуляризация
+        \end{itemize}
+    \end{block}
+\end{frame}
+
+\section{Truncated Sequential NPE}
+
+\begin{frame}{Усечённое предложение}
+    Ключевая идея: выбрать proposal $\tilde{p}(\theta)$, пропорциональное априору на некотором множестве $\mathcal{S}$:
+    \[
+    \tilde{p}(\theta) = \frac{p(\theta)\,\mathbf{1}_{\mathcal{S}}(\theta)}{Z_{\mathcal{S}}},
+    \]
+    где $\mathcal{S}$ – область высокой апостериорной вероятности (например, усечённый текущий аппроксимированный апостериор)
+    \pause
+    Тогда отношение $p(\theta)/\tilde{p}(\theta) = Z_{\mathcal{S}} = \text{const}$ внутри $\mathcal{S}$, и смещение исчезает:
+    \[
+    \tilde{p}(\theta)p(x\mid\theta) \propto p(\theta)p(x\mid\theta) \quad \text{на } \mathcal{S}.
+    \]
+    \pause
+    \textbf{Обучение:} обычный NPE на данных из $\tilde{p}$, без каких-либо весов или контрастивных членов
+\end{frame}
+
+\begin{frame}{Как выбрать $\mathcal{S}$}
+    Обычно $\tilde{p}(\theta)$ – это текущая оценка апостериора $q_{\phi_{\text{old}}}(\theta\mid x_o)$, усечённая до области, где она не превышает некоторого порога или просто обрезанная по границам априора
+    \pause
+    \begin{itemize}
+        \item Простейший вариант: $\tilde{p}(\theta) \propto q_{\text{old}}(\theta\mid x_o) \cdot \mathbf{1}_{p(\theta)>0}$
+        \item Более аккуратно: усечение по гиперкубу или по квантилям $q_{\text{old}}$
+    \end{itemize}
+    \pause
+    \textbf{Важно:} так как $\tilde{p}(\theta)$ пропорциональна $p(\theta)$ внутри $\mathcal{S}$, смещение отсутствует по построению, и коррекция не нужна 
+\end{frame}
+
+\begin{frame}{Преимущества и недостатки Truncated SNPE}
+    \begin{block}{Преимущества}
+        \begin{itemize}
+            \item Простота реализации
+            \item Нет проблем с весами
+            \item Гарантированно не выходит за границы априора (нет leakage)
+            \item Идеально стыкуется с FMPE, где быстрый $\log q_\phi$ отсутствует
+        \end{itemize}
+    \end{block}
+    \pause
+    \begin{block}{Недостатки}
+        \begin{itemize}
+            \item Если истинный апостериор сконцентрирован у границы априора, усечение может исказить форму
+            \item Требует настройки параметров усечения (слишком узкое – потеря точности, слишком широкое – низкая эффективность)
+        \end{itemize}
+    \end{block}
+\end{frame}
+
+\section{Сравнительная таблица}
+
+\begin{frame}{Сводка методов}
+    \centering
+    \begin{tabular}{@{}p{2cm} p{2.5cm} p{2.5cm} p{2.5cm} p{2.2cm}@{}}
+        \toprule
+        \textbf{Метод} & \textbf{Коррекция} & \textbf{Требования} & \textbf{Ограничения} & \textbf{Совместимость с FMPE} \\
+        \midrule
+        SNPE-A & Аналитическая пост-обработка MoG & Только MoG-модели & Низкая гибкость & Нет (нужен log q) \\
+        \addlinespace
+        SNPE-B & Важностные веса $\frac{p}{\tilde{p}}$ & $\log\tilde{p}$ и $\log p$ & Высокая дисперсия весов & Нет (нужен log q) \\
+        \addlinespace
+        APT (SNPE-C) & Контрастивная потеря InfoNCE & $\log q_\phi(\theta\mid x)$ & Leakage, большие батчи & Нет (дорогой log q) \\
+        \addlinespace
+        Truncated & Усечение proposal $\propto p$ & Никаких & Выбор $\mathcal{S}$, искажения на границах & \textbf{Да} \\
+        \bottomrule
+    \end{tabular}
+\end{frame}
+
+\begin{frame}{Заключение}
+    \begin{itemize}
+        \item Все методы, кроме Truncated, в той или иной форме требуют быстрого вычисления логарифма плотности модели $q_\phi$
+        \item Для моделей без дешёвого $\log q$ (как FMPE) естественным выбором является Truncated Sequential NPE
+        \item APT (SNPE-C) наиболее гибок и популярен для классических потоков, но не избавляет от $\log q_\phi$
+    \end{itemize}
+\end{frame}
+
+\end{document}

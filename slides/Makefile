@@ -1,4 +1,4 @@
-OUT_NAME = Flow Matching
+OUT_NAME = Sequential Methods-2
 
 all: build move
 

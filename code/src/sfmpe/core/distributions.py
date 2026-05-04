@@ -36,9 +36,19 @@ class Uniform(Distribution):
 
 
 class Normal(Distribution):
-
+    def __init__(self, dim=1):
+        self.dim = dim
+        self.dist = torch.distributions.MultivariateNormal(torch.zeros(dim), covariance_matrix=torch.eye(dim))
+    
     def sample(self, size, **kwargs) -> torch.Tensor:
-        return torch.randn(size)
+        return self.dist.sample(size)
+    
+    def sample_like(self, tensor: torch.Tensor, **kwargs) -> torch.Tensor:
+        assert tensor.shape[-1] == self.dim
+        return self.dist.sample(sample_shape=tensor.shape[:-1])
+
+    def log_prob(self, value: torch.Tensor, **kwargs) -> torch.Tensor:
+        return self.dist.log_prob(value, **kwargs)
 
 
 

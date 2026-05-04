@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.27 (MiKTeX 25.4) (preloaded format=pdflatex 2025.10.12)  9 MAR 2026 18:39
+This is pdfTeX, Version 3.141592653-2.6-1.40.27 (MiKTeX 25.4) (preloaded format=pdflatex 2025.10.12)  4 MAY 2026 18:47
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -6,7 +6,7 @@ entering extended mode
 (main.tex
 LaTeX2e <2025-06-01> patch level 1
 L3 programming layer <2025-09-02>
-(dep/quick_tour.tex
+(dep/seq_methods2.tex
 (C:\Users\Mikhail\AppData\Local\Programs\MiKTeX\tex/latex/beamer\beamer.cls
 Document Class: beamer 2025/08/13 v3.76 A class for typesetting presentations
 
@@ -185,8 +185,8 @@ c.code.tex)
 at.code.tex
 \c@pgfmathroundto@lastzeros=\count309
 )))
-(C:\Users\Mikhail\AppData\Local\Programs\MiKTeX\tex/latex/base\size11.clo
-File: size11.clo 2025/01/22 v1.4n Standard LaTeX file (size option)
+(C:\Users\Mikhail\AppData\Local\Programs\MiKTeX\tex/latex/base\size10.clo
+File: size10.clo 2025/01/22 v1.4n Standard LaTeX file (size option)
 )
 (C:\Users\Mikhail\AppData\Local\Programs\MiKTeX\tex/latex/pgf/basiclayer\pgfcor
 e.sty
@@ -770,68 +770,8 @@ medefault.sty
 )
 (C:\Users\Mikhail\AppData\Local\Programs\MiKTeX\tex/latex/beamer\beamerouterthe
 medefault.sty)))
-(C:\Users\Mikhail\AppData\Local\Programs\MiKTeX\tex/latex/beamer\beamerthemeMad
-rid.sty
-(C:\Users\Mikhail\AppData\Local\Programs\MiKTeX\tex/latex/beamer\beamercolorthe
-mewhale.sty)
-(C:\Users\Mikhail\AppData\Local\Programs\MiKTeX\tex/latex/beamer\beamercolorthe
-meorchid.sty)
-(C:\Users\Mikhail\AppData\Local\Programs\MiKTeX\tex/latex/beamer\beamerinnerthe
-merounded.sty)
-(C:\Users\Mikhail\AppData\Local\Programs\MiKTeX\tex/latex/beamer\beamerouterthe
-meinfolines.sty))
-(C:\Users\Mikhail\AppData\Local\Programs\MiKTeX\tex/latex/base\inputenc.sty
-Package: inputenc 2024/02/08 v1.3d Input encoding file
-\inpenc@prehook=\toks46
-\inpenc@posthook=\toks47
-)
-(C:\Users\Mikhail\AppData\Local\Programs\MiKTeX\tex/generic/babel\babel.sty
-Package: babel 2025/08/03 v25.12 The multilingual framework for LuaLaTeX, pdfLa
-TeX and XeLaTeX
-\babel@savecnt=\count358
-LaTeX Encoding Info:    Redeclaring text command \ij (encoding OT1) on input li
-ne 2045.
-LaTeX Encoding Info:    Redeclaring text command \IJ (encoding OT1) on input li
-ne 2047.
-LaTeX Encoding Info:    Redeclaring text command \ij (encoding T1) on input lin
-e 2049.
-LaTeX Encoding Info:    Redeclaring text command \IJ (encoding T1) on input lin
-e 2050.
-LaTeX Encoding Info:    Ignoring declaration for text command \ij (encoding ?) 
-on input line 2051.
-LaTeX Encoding Info:    Ignoring declaration for text command \IJ (encoding ?) 
-on input line 2053.
-LaTeX Encoding Info:    Ignoring declaration for text command \SS (encoding ?) 
-on input line 2078.
-\U@D=\dimen302
-\l@unhyphenated=\language79
-
-(C:\Users\Mikhail\AppData\Local\Programs\MiKTeX\tex/generic/babel\txtbabel.def)
-\bbl@readstream=\read3
-LaTeX Info: Redefining \textlatin on input line 3930.
-\bbl@dirlevel=\count359
-*************************************
-* Local config file bblopts.cfg used
-*
-(C:\Users\Mikhail\AppData\Local\Programs\MiKTeX\tex/latex/arabi\bblopts.cfg
-File: bblopts.cfg 2005/09/08 v0.1 add Arabic and Farsi to "declared" options of
- babel
-)
-(C:\Users\Mikhail\AppData\Local\Programs\MiKTeX\tex/latex/babel-russian\russian
-b.ldf
-File: russianb.ldf 2021/01/10 1.3m Russian support for the Babel system
-Language: russian 2020/09/09 1.3k Russian support for the Babel system
-
-(C:\Users\Mikhail\AppData\Local\Programs\MiKTeX\tex/generic/babel/locale/ru\bab
-el-russian.tex
-Package babel Info: Importing font and identification data for russian
-(babel)             from babel-ru.ini. Reported on input line 12.
-)
-
-Package babel Warning: No Cyrillic font encoding has been loaded so far.
-(babel)                A font encoding should be declared before babel.
-(babel)                Default `T2A' encoding will be loaded  on input line 78.
-
+(C:\Users\Mikhail\AppData\Local\Programs\MiKTeX\tex/latex/base\fontenc.sty
+Package: fontenc 2024/12/21 v2.1c Standard LaTeX package
 
 (C:\Users\Mikhail\AppData\Local\Programs\MiKTeX\tex/latex/cyrillic\t2aenc.def
 File: t2aenc.def 2023/11/07 v1.0k Cyrillic encoding definition file
@@ -1039,15 +979,86 @@ File: t2aenc.dfu 2022/06/07 v1.3c UTF-8 support
    defining Unicode char U+FB05 (decimal 64261)
    defining Unicode char U+FB06 (decimal 64262)
 ))
+LaTeX Font Info:    Trying to load font information for T2A+cmss on input line 
+116.
+
+(C:\Users\Mikhail\AppData\Local\Programs\MiKTeX\tex/latex/cyrillic\t2acmss.fd
+File: t2acmss.fd 2001/08/11 v1.0a Computer Modern Cyrillic font definitions
+)) (C:\Users\Mikhail\AppData\Local\Programs\MiKTeX\tex/latex/base\inputenc.sty
+Package: inputenc 2024/02/08 v1.3d Input encoding file
+\inpenc@prehook=\toks46
+\inpenc@posthook=\toks47
+)
+(C:\Users\Mikhail\AppData\Local\Programs\MiKTeX\tex/generic/babel\babel.sty
+Package: babel 2025/08/03 v25.12 The multilingual framework for LuaLaTeX, pdfLa
+TeX and XeLaTeX
+\babel@savecnt=\count358
+LaTeX Encoding Info:    Redeclaring text command \ij (encoding OT1) on input li
+ne 2045.
+LaTeX Encoding Info:    Redeclaring text command \IJ (encoding OT1) on input li
+ne 2047.
+LaTeX Encoding Info:    Redeclaring text command \ij (encoding T1) on input lin
+e 2049.
+LaTeX Encoding Info:    Redeclaring text command \IJ (encoding T1) on input lin
+e 2050.
+LaTeX Encoding Info:    Ignoring declaration for text command \ij (encoding ?) 
+on input line 2051.
+LaTeX Encoding Info:    Ignoring declaration for text command \IJ (encoding ?) 
+on input line 2053.
+LaTeX Encoding Info:    Ignoring declaration for text command \SS (encoding ?) 
+on input line 2078.
+\U@D=\dimen302
+\l@unhyphenated=\language79
+
+(C:\Users\Mikhail\AppData\Local\Programs\MiKTeX\tex/generic/babel\txtbabel.def)
+\bbl@readstream=\read3
+LaTeX Info: Redefining \textlatin on input line 3930.
+\bbl@dirlevel=\count359
+*************************************
+* Local config file bblopts.cfg used
+*
+(C:\Users\Mikhail\AppData\Local\Programs\MiKTeX\tex/latex/arabi\bblopts.cfg
+File: bblopts.cfg 2005/09/08 v0.1 add Arabic and Farsi to "declared" options of
+ babel
+)
+(C:\Users\Mikhail\AppData\Local\Programs\MiKTeX\tex/latex/babel-russian\russian
+b.ldf
+File: russianb.ldf 2021/01/10 1.3m Russian support for the Babel system
+Language: russian 2020/09/09 1.3k Russian support for the Babel system
+
+(C:\Users\Mikhail\AppData\Local\Programs\MiKTeX\tex/generic/babel/locale/ru\bab
+el-russian.tex
+Package babel Info: Importing font and identification data for russian
+(babel)             from babel-ru.ini. Reported on input line 12.
+)
 Package babel Info: Making " an active character on input line 124.
 Package babel Info: Default for \cyrdash is provided on input line 163.
 ))
+(C:\Users\Mikhail\AppData\Local\Programs\MiKTeX\tex/latex/booktabs\booktabs.sty
+Package: booktabs 2020/01/12 v1.61803398 Publication quality tables
+\heavyrulewidth=\dimen303
+\lightrulewidth=\dimen304
+\cmidrulewidth=\dimen305
+\belowrulesep=\dimen306
+\belowbottomsep=\dimen307
+\aboverulesep=\dimen308
+\abovetopsep=\dimen309
+\cmidrulesep=\dimen310
+\cmidrulekern=\dimen311
+\defaultaddspace=\dimen312
+\@cmidla=\count360
+\@cmidlb=\count361
+\@aboverulesep=\dimen313
+\@belowrulesep=\dimen314
+\@thisruleclass=\count362
+\@lastruleclass=\count363
+\@thisrulewidth=\dimen315
+)
 \sympureletters=\mathgroup6
 LaTeX Font Info:    Overwriting symbol font `pureletters' in version `bold'
 (Font)                  OT1/mathkerncmss/m/sl --> OT1/mathkerncmss/bx/sl on inp
-ut line 9.
-
-(C:\Users\Mikhail\AppData\Local\Programs\MiKTeX\tex/latex/tools\bm.sty
+ut line 8.
+ (C:\Users\Mikhail\AppData\Local\Programs\MiKTeX\tex/latex/tools\bm.sty
 Package: bm 2023/12/19 v1.2f Bold Symbol Support (DPC/FMi)
 \symboldoperators=\mathgroup7
 \symboldletters=\mathgroup8
@@ -1058,115 +1069,52 @@ Package bm Info: No bold for \U/msb/m/n, using \pmb.
 \symboldpureletters=\mathgroup10
 LaTeX Font Info:    Redeclaring math alphabet \mathbf on input line 149.
 )
-(C:\Users\Mikhail\AppData\Local\Programs\MiKTeX\tex/latex/animate\animate.sty
-Package: animate 2024/10/14 PDF & SVG animations from files and inline graphics
-
-
-(C:\Users\Mikhail\AppData\Local\Programs\MiKTeX\tex/latex/base\ifthen.sty
-Package: ifthen 2024/03/16 v1.1e Standard LaTeX ifthen package (DPC)
-)
-(C:\Users\Mikhail\AppData\Local\Programs\MiKTeX\tex/latex/oberdiek\ifdraft.sty
-Package: ifdraft 2016/05/16 v1.4 Detect class options draft and final (HO)
-) (C:\Users\Mikhail\AppData\Local\Programs\MiKTeX\tex/latex/tools\calc.sty
-Package: calc 2025/03/01 v4.3b Infix arithmetic (KKT,FJ)
-\calc@Acount=\count360
-\calc@Bcount=\count361
-\calc@Adimen=\dimen303
-\calc@Bdimen=\dimen304
-\calc@Askip=\skip67
-\calc@Bskip=\skip68
-LaTeX Info: Redefining \setlength on input line 86.
-LaTeX Info: Redefining \addtolength on input line 87.
-\calc@Ccount=\count362
-\calc@Cskip=\skip69
-)
-(C:\Users\Mikhail\AppData\Local\Programs\MiKTeX\tex/latex/media9\pdfbase.sty
-Package: pdfbase 2024/09/16 v0.59 driver independent access to low-level PDF fe
-atures
-
+(C:\Users\Mikhail\AppData\Local\Programs\MiKTeX\tex/latex/beamer\beamerthemeMad
+rid.sty
+(C:\Users\Mikhail\AppData\Local\Programs\MiKTeX\tex/latex/beamer\beamercolorthe
+mewhale.sty)
+(C:\Users\Mikhail\AppData\Local\Programs\MiKTeX\tex/latex/beamer\beamercolorthe
+meorchid.sty)
+(C:\Users\Mikhail\AppData\Local\Programs\MiKTeX\tex/latex/beamer\beamerinnerthe
+merounded.sty)
+(C:\Users\Mikhail\AppData\Local\Programs\MiKTeX\tex/latex/beamer\beamerouterthe
+meinfolines.sty))
 (C:\Users\Mikhail\AppData\Local\Programs\MiKTeX\tex/latex/l3backend\l3backend-p
 dftex.def
 File: l3backend-pdftex.def 2025-06-09 L3 backend support: PDF output (pdfTeX)
-\l__color_backend_stack_int=\count363
-)
-\g_pbs_page_int=\count364
-\g_pbs_oc_int=\count365
-)
-(C:\Users\Mikhail\AppData\Local\Programs\MiKTeX\tex/latex/zref\zref-abspage.sty
-Package: zref-abspage 2025-06-08 v2.36 Module abspage for zref (HO)
-(C:\Users\Mikhail\AppData\Local\Programs\MiKTeX\tex/latex/zref\zref-base.sty
-Package: zref-base 2025-06-08 v2.36 Module base for zref (HO)
-
-(C:\Users\Mikhail\AppData\Local\Programs\MiKTeX\tex/generic/etexcmds\etexcmds.s
-ty
-Package: etexcmds 2019/12/15 v1.7 Avoid name clashes with e-TeX commands (HO)
-)
-(C:\Users\Mikhail\AppData\Local\Programs\MiKTeX\tex/latex/auxhook\auxhook.sty
-Package: auxhook 2019-12-17 v1.6 Hooks for auxiliary files (HO)
-)
-Package zref Info: New property list: main on input line 767.
-Package zref Info: New property: default on input line 768.
-Package zref Info: New property: page on input line 769.
-)
-\c@abspage=\count366
-Package zref Info: New property: abspage on input line 67.
-) (C:\Users\Mikhail\AppData\Local\Programs\MiKTeX\tex/latex/ocgx2\ocgbase.sty
-Package: ocgbase 2024/09/15 v0.24 support package for ocgx2.sty
-)
-\@anim@box=\box78
-\@anim@measbox=\box79
-\@anim@tmpdima=\dimen305
-\@anim@tmpdimb=\dimen306
-\@anim@num=\count367
-\@anim@curframe=\count368
-\@anim@curframe@zb=\count369
-\@anim@resizeflags=\count370
-\@anim@skipfram=\count371
-\@anim@mulframecnt=\count372
-\@anim@@tmlnfile=\read4
-\@anim@tmpcnt=\count373
-\c@@anim@ltxcnt=\count374
-\@anim@curlayer=\count375
-\@anim@lineno=\count376
-\@anim@curfield=\count377
-\@anim@@resizeflags=\count378
+\l__color_backend_stack_int=\count364
 ) (main.aux
-LaTeX Font Info:    Trying to load font information for T2A+cmss on input line 
-12.
-
-(C:\Users\Mikhail\AppData\Local\Programs\MiKTeX\tex/latex/cyrillic\t2acmss.fd
-File: t2acmss.fd 2001/08/11 v1.0a Computer Modern Cyrillic font definitions
-)
 Package babel Info: 'russian' activates 'russian' shorthands.
-(babel)             Reported on input line 12.
+(babel)             Reported on input line 8.
 )
 \openout1 = `main.aux'.
 
-LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 18.
-LaTeX Font Info:    ... okay on input line 18.
-LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 18.
-LaTeX Font Info:    ... okay on input line 18.
-LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 18.
-LaTeX Font Info:    ... okay on input line 18.
-LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 18.
-LaTeX Font Info:    ... okay on input line 18.
-LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 18.
-LaTeX Font Info:    ... okay on input line 18.
-LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 18.
-LaTeX Font Info:    ... okay on input line 18.
-LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 18.
-LaTeX Font Info:    ... okay on input line 18.
-LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 18.
-LaTeX Font Info:    ... okay on input line 18.
-LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 18.
-LaTeX Font Info:    ... okay on input line 18.
-LaTeX Font Info:    Checking defaults for T2A/cmr/m/n on input line 18.
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 16.
+LaTeX Font Info:    ... okay on input line 16.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 16.
+LaTeX Font Info:    ... okay on input line 16.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 16.
+LaTeX Font Info:    ... okay on input line 16.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 16.
+LaTeX Font Info:    ... okay on input line 16.
+LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 16.
+LaTeX Font Info:    ... okay on input line 16.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 16.
+LaTeX Font Info:    ... okay on input line 16.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 16.
+LaTeX Font Info:    ... okay on input line 16.
+LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 16.
+LaTeX Font Info:    ... okay on input line 16.
+LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 16.
+LaTeX Font Info:    ... okay on input line 16.
+LaTeX Font Info:    Checking defaults for T2A/cmr/m/n on input line 16.
 LaTeX Font Info:    Trying to load font information for T2A+cmr on input line 1
-8.
+6.
+
 (C:\Users\Mikhail\AppData\Local\Programs\MiKTeX\tex/latex/cyrillic\t2acmr.fd
 File: t2acmr.fd 2001/08/11 v1.0a Computer Modern Cyrillic font definitions
 )
-LaTeX Font Info:    ... okay on input line 18.
+LaTeX Font Info:    ... okay on input line 16.
 
 *geometry* driver: auto-detecting
 *geometry* detected driver: pdftex
@@ -1176,23 +1124,23 @@ LaTeX Font Info:    ... okay on input line 18.
 * layout: <same size as paper>
 * layoutoffset:(h,v)=(0.0pt,0.0pt)
 * modes: includehead includefoot 
-* h-part:(L,W,R)=(10.95003pt, 342.2953pt, 10.95003pt)
-* v-part:(T,H,B)=(0.0pt, 273.14662pt, 0.0pt)
-* \paperwidth=364.19536pt
-* \paperheight=273.14662pt
-* \textwidth=342.2953pt
-* \textheight=244.6939pt
-* \oddsidemargin=-61.31996pt
-* \evensidemargin=-61.31996pt
+* h-part:(L,W,R)=(9.99756pt, 435.24896pt, 9.99756pt)
+* v-part:(T,H,B)=(0.0pt, 256.0748pt, 0.0pt)
+* \paperwidth=455.24408pt
+* \paperheight=256.0748pt
+* \textwidth=435.24896pt
+* \textheight=227.62207pt
+* \oddsidemargin=-62.27243pt
+* \evensidemargin=-62.27243pt
 * \topmargin=-72.26999pt
 * \headheight=14.22636pt
 * \headsep=0.0pt
-* \topskip=11.0pt
+* \topskip=10.0pt
 * \footskip=14.22636pt
-* \marginparwidth=4.0pt
-* \marginparsep=10.0pt
+* \marginparwidth=3.0pt
+* \marginparsep=11.0pt
 * \columnsep=10.0pt
-* \skip\footins=10.0pt plus 4.0pt minus 2.0pt
+* \skip\footins=9.0pt plus 4.0pt minus 2.0pt
 * \hoffset=0.0pt
 * \voffset=0.0pt
 * \mag=1000
@@ -1206,16 +1154,16 @@ LaTeX Font Info:    ... okay on input line 18.
 (C:\Users\Mikhail\AppData\Local\Programs\MiKTeX\tex/context/base/mkii\supp-pdf.
 mkii
 [Loading MPS to PDF converter (version 2006.09.02).]
-\scratchcounter=\count379
-\scratchdimen=\dimen307
-\scratchbox=\box80
-\nofMPsegments=\count380
-\nofMParguments=\count381
+\scratchcounter=\count365
+\scratchdimen=\dimen316
+\scratchbox=\box78
+\nofMPsegments=\count366
+\nofMParguments=\count367
 \everyMPshowfont=\toks48
-\MPscratchCnt=\count382
-\MPscratchDim=\dimen308
-\MPnumerator=\count383
-\makeMPintoPDFobject=\count384
+\MPscratchCnt=\count368
+\MPscratchDim=\dimen317
+\MPnumerator=\count369
+\makeMPintoPDFobject=\count370
 \everyMPtoPDFconversion=\toks49
 )
 (C:\Users\Mikhail\AppData\Local\Programs\MiKTeX\tex/latex/epstopdf-pkg\epstopdf
@@ -1228,65 +1176,75 @@ Package epstopdf-base Info: Redefining graphics rule for `.eps' on input line 4
 .cfg
 File: epstopdf-sys.cfg 2021/03/18 v2.0 Configuration of epstopdf for MiKTeX
 ))
-Package hyperref Info: Link coloring OFF on input line 18.
+Package hyperref Info: Link coloring OFF on input line 16.
  (main.out) (main.out)
 \@outlinefile=\write5
 \openout5 = `main.out'.
 
 LaTeX Font Info:    Overwriting symbol font `operators' in version `normal'
-(Font)                  OT1/cmr/m/n --> OT1/cmss/m/n on input line 18.
+(Font)                  OT1/cmr/m/n --> OT1/cmss/m/n on input line 16.
 LaTeX Font Info:    Overwriting symbol font `operators' in version `bold'
-(Font)                  OT1/cmr/bx/n --> OT1/cmss/b/n on input line 18.
+(Font)                  OT1/cmr/bx/n --> OT1/cmss/b/n on input line 16.
 \symnumbers=\mathgroup11
-LaTeX Font Info:    Redeclaring symbol font `pureletters' on input line 18.
+LaTeX Font Info:    Redeclaring symbol font `pureletters' on input line 16.
+LaTeX Font Info:    Encoding `OT1' has changed to `T2A' for symbol font
+(Font)              `pureletters' in the math version `normal' on input line 16
+.
 LaTeX Font Info:    Overwriting symbol font `pureletters' in version `normal'
-(Font)                  OT1/mathkerncmss/m/sl --> OT1/cmss/m/it on input line 1
-8.
+(Font)                  OT1/mathkerncmss/m/sl --> T2A/cmss/m/it on input line 1
+6.
+LaTeX Font Info:    Encoding `OT1' has changed to `T2A' for symbol font
+(Font)              `pureletters' in the math version `bold' on input line 16.
 LaTeX Font Info:    Overwriting symbol font `pureletters' in version `bold'
-(Font)                  OT1/mathkerncmss/bx/sl --> OT1/cmss/m/it on input line 
-18.
+(Font)                  OT1/mathkerncmss/bx/sl --> T2A/cmss/m/it on input line 
+16.
 LaTeX Font Info:    Overwriting math alphabet `\mathrm' in version `normal'
-(Font)                  OT1/cmss/m/n --> OT1/cmr/m/n on input line 18.
-LaTeX Font Info:    Redeclaring math alphabet \mathbf on input line 18.
-LaTeX Font Info:    Redeclaring math alphabet \mathsf on input line 18.
+(Font)                  OT1/cmss/m/n --> T2A/cmr/m/n on input line 16.
+LaTeX Font Info:    Redeclaring math alphabet \mathbf on input line 16.
+LaTeX Font Info:    Redeclaring math alphabet \mathsf on input line 16.
 LaTeX Font Info:    Overwriting math alphabet `\mathsf' in version `normal'
-(Font)                  OT1/cmss/m/n --> OT1/cmss/m/n on input line 18.
+(Font)                  OT1/cmss/m/n --> T2A/cmss/m/n on input line 16.
 LaTeX Font Info:    Overwriting math alphabet `\mathsf' in version `bold'
-(Font)                  OT1/cmss/bx/n --> OT1/cmss/m/n on input line 18.
-LaTeX Font Info:    Redeclaring math alphabet \mathit on input line 18.
+(Font)                  OT1/cmss/bx/n --> T2A/cmss/m/n on input line 16.
+LaTeX Font Info:    Redeclaring math alphabet \mathit on input line 16.
 LaTeX Font Info:    Overwriting math alphabet `\mathit' in version `normal'
-(Font)                  OT1/cmr/m/it --> OT1/cmss/m/it on input line 18.
+(Font)                  OT1/cmr/m/it --> T2A/cmss/m/it on input line 16.
 LaTeX Font Info:    Overwriting math alphabet `\mathit' in version `bold'
-(Font)                  OT1/cmr/bx/it --> OT1/cmss/m/it on input line 18.
-LaTeX Font Info:    Redeclaring math alphabet \mathtt on input line 18.
+(Font)                  OT1/cmr/bx/it --> T2A/cmss/m/it on input line 16.
+LaTeX Font Info:    Redeclaring math alphabet \mathtt on input line 16.
 LaTeX Font Info:    Overwriting math alphabet `\mathtt' in version `normal'
-(Font)                  OT1/cmtt/m/n --> OT1/cmtt/m/n on input line 18.
+(Font)                  OT1/cmtt/m/n --> T2A/cmtt/m/n on input line 16.
 LaTeX Font Info:    Overwriting math alphabet `\mathtt' in version `bold'
-(Font)                  OT1/cmtt/m/n --> OT1/cmtt/m/n on input line 18.
+(Font)                  OT1/cmtt/m/n --> T2A/cmtt/m/n on input line 16.
 LaTeX Font Info:    Overwriting symbol font `numbers' in version `bold'
-(Font)                  OT1/cmss/m/n --> OT1/cmss/b/n on input line 18.
+(Font)                  T2A/cmss/m/n --> T2A/cmss/b/n on input line 16.
 LaTeX Font Info:    Overwriting symbol font `pureletters' in version `bold'
-(Font)                  OT1/cmss/m/it --> OT1/cmss/b/it on input line 18.
+(Font)                  T2A/cmss/m/it --> T2A/cmss/b/it on input line 16.
 LaTeX Font Info:    Overwriting math alphabet `\mathrm' in version `bold'
-(Font)                  OT1/cmss/b/n --> OT1/cmr/b/n on input line 18.
+(Font)                  OT1/cmss/b/n --> T2A/cmr/b/n on input line 16.
 LaTeX Font Info:    Overwriting math alphabet `\mathbf' in version `bold'
-(Font)                  OT1/cmss/b/n --> OT1/cmss/b/n on input line 18.
+(Font)                  T2A/cmss/b/n --> T2A/cmss/b/n on input line 16.
 LaTeX Font Info:    Overwriting math alphabet `\mathsf' in version `bold'
-(Font)                  OT1/cmss/m/n --> OT1/cmss/b/n on input line 18.
+(Font)                  T2A/cmss/m/n --> T2A/cmss/b/n on input line 16.
 LaTeX Font Info:    Overwriting math alphabet `\mathit' in version `bold'
-(Font)                  OT1/cmss/m/it --> OT1/cmss/b/it on input line 18.
+(Font)                  T2A/cmss/m/it --> T2A/cmss/b/it on input line 16.
 LaTeX Font Info:    Overwriting math alphabet `\mathtt' in version `bold'
-(Font)                  OT1/cmtt/m/n --> OT1/cmtt/b/n on input line 18.
-LaTeX Font Info:    Redeclaring symbol font `pureletters' on input line 18.
+(Font)                  T2A/cmtt/m/n --> T2A/cmtt/b/n on input line 16.
+LaTeX Font Info:    Redeclaring symbol font `pureletters' on input line 16.
+LaTeX Font Info:    Encoding `T2A' has changed to `OT1' for symbol font
+(Font)              `pureletters' in the math version `normal' on input line 16
+.
 LaTeX Font Info:    Overwriting symbol font `pureletters' in version `normal'
-(Font)                  OT1/cmss/m/it --> OT1/mathkerncmss/m/sl on input line 1
-8.
+(Font)                  T2A/cmss/m/it --> OT1/mathkerncmss/m/sl on input line 1
+6.
+LaTeX Font Info:    Encoding `T2A' has changed to `OT1' for symbol font
+(Font)              `pureletters' in the math version `bold' on input line 16.
 LaTeX Font Info:    Overwriting symbol font `pureletters' in version `bold'
-(Font)                  OT1/cmss/b/it --> OT1/mathkerncmss/m/sl on input line 1
-8.
+(Font)                  T2A/cmss/b/it --> OT1/mathkerncmss/m/sl on input line 1
+6.
 LaTeX Font Info:    Overwriting symbol font `pureletters' in version `bold'
 (Font)                  OT1/mathkerncmss/m/sl --> OT1/mathkerncmss/bx/sl on inp
-ut line 18.
+ut line 16.
 
 (C:\Users\Mikhail\AppData\Local\Programs\MiKTeX\tex/latex/translator\translator
 -basic-dictionary-English.dict
@@ -1312,36 +1270,35 @@ Dictionary: translator-numbers-dictionary, Language: English
 -theorem-dictionary-English.dict
 Dictionary: translator-theorem-dictionary, Language: English 
 )
-LaTeX Info: Redefining \th on input line 18.
+LaTeX Info: Redefining \th on input line 16.
  (main.nav)
 
 [1
 
 {C:/Users/Mikhail/AppData/Local/MiKTeX/fonts/map/pdftex/pdftex.map}]
-LaTeX Font Info:    Trying to load font information for U+msa on input line 44.
+(main.toc)
 
+[2
 
-(C:\Users\Mikhail\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\umsa.fd
+]
+LaTeX Font Info:    Trying to load font information for U+msa on input line 38.
+
+ (C:\Users\Mikhail\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\umsa.fd
 File: umsa.fd 2013/01/14 v3.01 AMS symbols A
 )
-LaTeX Font Info:    Trying to load font information for U+msb on input line 44.
-
+LaTeX Font Info:    Trying to load font information for U+msb on input line 38.
 
 (C:\Users\Mikhail\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\umsb.fd
 File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 )
 LaTeX Font Info:    Trying to load font information for OT1+mathkerncmss on inp
-ut line 44.
+ut line 38.
 
 (C:\Users\Mikhail\AppData\Local\Programs\MiKTeX\tex/latex/sansmathaccent\ot1mat
 hkerncmss.fd
 File: ot1mathkerncmss.fd 2020/01/31 Fontinst v1.933 font definitions for OT1/ma
 thkerncmss.
 )
-
-[2
-
-]
 
 [3
 
@@ -1350,954 +1307,6 @@ thkerncmss.
 [4
 
 ]
-<anim/FM/frame_0001.jpeg, id=168, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0001.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0001.jpeg>
-Package pdftex.def Info: anim/FM/frame_0001.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0001.jpeg> <a0,fr0>
-<anim/FM/frame_0002.jpeg, id=171, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0002.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0002.jpeg>
-Package pdftex.def Info: anim/FM/frame_0002.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0002.jpeg> <a0,fr1>
-<anim/FM/frame_0003.jpeg, id=174, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0003.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0003.jpeg>
-Package pdftex.def Info: anim/FM/frame_0003.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0003.jpeg> <a0,fr2>
-<anim/FM/frame_0004.jpeg, id=177, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0004.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0004.jpeg>
-Package pdftex.def Info: anim/FM/frame_0004.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0004.jpeg> <a0,fr3>
-<anim/FM/frame_0005.jpeg, id=180, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0005.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0005.jpeg>
-Package pdftex.def Info: anim/FM/frame_0005.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0005.jpeg> <a0,fr4>
-<anim/FM/frame_0006.jpeg, id=183, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0006.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0006.jpeg>
-Package pdftex.def Info: anim/FM/frame_0006.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0006.jpeg> <a0,fr5>
-<anim/FM/frame_0007.jpeg, id=186, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0007.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0007.jpeg>
-Package pdftex.def Info: anim/FM/frame_0007.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0007.jpeg> <a0,fr6>
-<anim/FM/frame_0008.jpeg, id=189, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0008.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0008.jpeg>
-Package pdftex.def Info: anim/FM/frame_0008.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0008.jpeg> <a0,fr7>
-<anim/FM/frame_0009.jpeg, id=192, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0009.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0009.jpeg>
-Package pdftex.def Info: anim/FM/frame_0009.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0009.jpeg> <a0,fr8>
-<anim/FM/frame_0010.jpeg, id=195, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0010.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0010.jpeg>
-Package pdftex.def Info: anim/FM/frame_0010.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0010.jpeg> <a0,fr9>
-<anim/FM/frame_0011.jpeg, id=198, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0011.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0011.jpeg>
-Package pdftex.def Info: anim/FM/frame_0011.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0011.jpeg> <a0,fr10>
-<anim/FM/frame_0012.jpeg, id=201, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0012.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0012.jpeg>
-Package pdftex.def Info: anim/FM/frame_0012.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0012.jpeg> <a0,fr11>
-<anim/FM/frame_0013.jpeg, id=204, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0013.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0013.jpeg>
-Package pdftex.def Info: anim/FM/frame_0013.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0013.jpeg> <a0,fr12>
-<anim/FM/frame_0014.jpeg, id=207, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0014.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0014.jpeg>
-Package pdftex.def Info: anim/FM/frame_0014.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0014.jpeg> <a0,fr13>
-<anim/FM/frame_0015.jpeg, id=210, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0015.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0015.jpeg>
-Package pdftex.def Info: anim/FM/frame_0015.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0015.jpeg> <a0,fr14>
-<anim/FM/frame_0016.jpeg, id=213, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0016.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0016.jpeg>
-Package pdftex.def Info: anim/FM/frame_0016.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0016.jpeg> <a0,fr15>
-<anim/FM/frame_0017.jpeg, id=216, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0017.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0017.jpeg>
-Package pdftex.def Info: anim/FM/frame_0017.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0017.jpeg>
-<a0,fr16>
-<anim/FM/frame_0018.jpeg, id=219, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0018.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0018.jpeg>
-Package pdftex.def Info: anim/FM/frame_0018.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0018.jpeg> <a0,fr17>
-<anim/FM/frame_0019.jpeg, id=222, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0019.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0019.jpeg>
-Package pdftex.def Info: anim/FM/frame_0019.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0019.jpeg>
-<a0,fr18>
-<anim/FM/frame_0020.jpeg, id=225, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0020.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0020.jpeg>
-Package pdftex.def Info: anim/FM/frame_0020.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0020.jpeg> <a0,fr19>
-<anim/FM/frame_0021.jpeg, id=228, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0021.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0021.jpeg>
-Package pdftex.def Info: anim/FM/frame_0021.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0021.jpeg>
-<a0,fr20>
-<anim/FM/frame_0022.jpeg, id=231, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0022.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0022.jpeg>
-Package pdftex.def Info: anim/FM/frame_0022.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0022.jpeg> <a0,fr21>
-<anim/FM/frame_0023.jpeg, id=234, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0023.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0023.jpeg>
-Package pdftex.def Info: anim/FM/frame_0023.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0023.jpeg>
-<a0,fr22>
-<anim/FM/frame_0024.jpeg, id=237, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0024.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0024.jpeg>
-Package pdftex.def Info: anim/FM/frame_0024.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0024.jpeg> <a0,fr23>
-<anim/FM/frame_0025.jpeg, id=240, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0025.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0025.jpeg>
-Package pdftex.def Info: anim/FM/frame_0025.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0025.jpeg>
-<a0,fr24>
-<anim/FM/frame_0026.jpeg, id=243, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0026.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0026.jpeg>
-Package pdftex.def Info: anim/FM/frame_0026.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0026.jpeg> <a0,fr25>
-<anim/FM/frame_0027.jpeg, id=246, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0027.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0027.jpeg>
-Package pdftex.def Info: anim/FM/frame_0027.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0027.jpeg>
-<a0,fr26>
-<anim/FM/frame_0028.jpeg, id=249, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0028.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0028.jpeg>
-Package pdftex.def Info: anim/FM/frame_0028.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0028.jpeg> <a0,fr27>
-<anim/FM/frame_0029.jpeg, id=252, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0029.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0029.jpeg>
-Package pdftex.def Info: anim/FM/frame_0029.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0029.jpeg>
-<a0,fr28>
-<anim/FM/frame_0030.jpeg, id=255, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0030.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0030.jpeg>
-Package pdftex.def Info: anim/FM/frame_0030.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0030.jpeg> <a0,fr29>
-<anim/FM/frame_0031.jpeg, id=258, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0031.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0031.jpeg>
-Package pdftex.def Info: anim/FM/frame_0031.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0031.jpeg>
-<a0,fr30>
-<anim/FM/frame_0032.jpeg, id=261, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0032.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0032.jpeg>
-Package pdftex.def Info: anim/FM/frame_0032.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0032.jpeg> <a0,fr31>
-<anim/FM/frame_0033.jpeg, id=264, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0033.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0033.jpeg>
-Package pdftex.def Info: anim/FM/frame_0033.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0033.jpeg>
-<a0,fr32>
-<anim/FM/frame_0034.jpeg, id=267, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0034.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0034.jpeg>
-Package pdftex.def Info: anim/FM/frame_0034.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0034.jpeg> <a0,fr33>
-<anim/FM/frame_0035.jpeg, id=270, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0035.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0035.jpeg>
-Package pdftex.def Info: anim/FM/frame_0035.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0035.jpeg>
-<a0,fr34>
-<anim/FM/frame_0036.jpeg, id=273, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0036.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0036.jpeg>
-Package pdftex.def Info: anim/FM/frame_0036.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0036.jpeg> <a0,fr35>
-<anim/FM/frame_0037.jpeg, id=276, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0037.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0037.jpeg>
-Package pdftex.def Info: anim/FM/frame_0037.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0037.jpeg>
-<a0,fr36>
-<anim/FM/frame_0038.jpeg, id=279, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0038.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0038.jpeg>
-Package pdftex.def Info: anim/FM/frame_0038.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0038.jpeg> <a0,fr37>
-<anim/FM/frame_0039.jpeg, id=282, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0039.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0039.jpeg>
-Package pdftex.def Info: anim/FM/frame_0039.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0039.jpeg>
-<a0,fr38>
-<anim/FM/frame_0040.jpeg, id=285, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0040.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0040.jpeg>
-Package pdftex.def Info: anim/FM/frame_0040.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0040.jpeg> <a0,fr39>
-<anim/FM/frame_0041.jpeg, id=288, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0041.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0041.jpeg>
-Package pdftex.def Info: anim/FM/frame_0041.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0041.jpeg>
-<a0,fr40>
-<anim/FM/frame_0042.jpeg, id=291, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0042.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0042.jpeg>
-Package pdftex.def Info: anim/FM/frame_0042.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0042.jpeg> <a0,fr41>
-<anim/FM/frame_0043.jpeg, id=294, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0043.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0043.jpeg>
-Package pdftex.def Info: anim/FM/frame_0043.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0043.jpeg>
-<a0,fr42>
-<anim/FM/frame_0044.jpeg, id=297, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0044.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0044.jpeg>
-Package pdftex.def Info: anim/FM/frame_0044.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0044.jpeg> <a0,fr43>
-<anim/FM/frame_0045.jpeg, id=300, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0045.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0045.jpeg>
-Package pdftex.def Info: anim/FM/frame_0045.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0045.jpeg>
-<a0,fr44>
-<anim/FM/frame_0046.jpeg, id=303, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0046.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0046.jpeg>
-Package pdftex.def Info: anim/FM/frame_0046.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0046.jpeg> <a0,fr45>
-<anim/FM/frame_0047.jpeg, id=306, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0047.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0047.jpeg>
-Package pdftex.def Info: anim/FM/frame_0047.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0047.jpeg>
-<a0,fr46>
-<anim/FM/frame_0048.jpeg, id=309, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0048.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0048.jpeg>
-Package pdftex.def Info: anim/FM/frame_0048.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0048.jpeg> <a0,fr47>
-<anim/FM/frame_0049.jpeg, id=312, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0049.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0049.jpeg>
-Package pdftex.def Info: anim/FM/frame_0049.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0049.jpeg>
-<a0,fr48>
-<anim/FM/frame_0050.jpeg, id=315, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0050.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0050.jpeg>
-Package pdftex.def Info: anim/FM/frame_0050.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0050.jpeg> <a0,fr49>
-<anim/FM/frame_0051.jpeg, id=318, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0051.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0051.jpeg>
-Package pdftex.def Info: anim/FM/frame_0051.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0051.jpeg>
-<a0,fr50>
-<anim/FM/frame_0052.jpeg, id=321, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0052.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0052.jpeg>
-Package pdftex.def Info: anim/FM/frame_0052.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0052.jpeg> <a0,fr51>
-<anim/FM/frame_0053.jpeg, id=324, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0053.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0053.jpeg>
-Package pdftex.def Info: anim/FM/frame_0053.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0053.jpeg>
-<a0,fr52>
-<anim/FM/frame_0054.jpeg, id=327, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0054.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0054.jpeg>
-Package pdftex.def Info: anim/FM/frame_0054.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0054.jpeg> <a0,fr53>
-<anim/FM/frame_0055.jpeg, id=330, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0055.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0055.jpeg>
-Package pdftex.def Info: anim/FM/frame_0055.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0055.jpeg>
-<a0,fr54>
-<anim/FM/frame_0056.jpeg, id=333, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0056.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0056.jpeg>
-Package pdftex.def Info: anim/FM/frame_0056.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0056.jpeg> <a0,fr55>
-<anim/FM/frame_0057.jpeg, id=336, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0057.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0057.jpeg>
-Package pdftex.def Info: anim/FM/frame_0057.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0057.jpeg>
-<a0,fr56>
-<anim/FM/frame_0058.jpeg, id=339, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0058.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0058.jpeg>
-Package pdftex.def Info: anim/FM/frame_0058.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0058.jpeg> <a0,fr57>
-<anim/FM/frame_0059.jpeg, id=342, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0059.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0059.jpeg>
-Package pdftex.def Info: anim/FM/frame_0059.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0059.jpeg>
-<a0,fr58>
-<anim/FM/frame_0060.jpeg, id=345, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0060.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0060.jpeg>
-Package pdftex.def Info: anim/FM/frame_0060.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0060.jpeg> <a0,fr59>
-<anim/FM/frame_0061.jpeg, id=348, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0061.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0061.jpeg>
-Package pdftex.def Info: anim/FM/frame_0061.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0061.jpeg>
-<a0,fr60>
-<anim/FM/frame_0062.jpeg, id=351, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0062.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0062.jpeg>
-Package pdftex.def Info: anim/FM/frame_0062.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0062.jpeg> <a0,fr61>
-<anim/FM/frame_0063.jpeg, id=354, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0063.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0063.jpeg>
-Package pdftex.def Info: anim/FM/frame_0063.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0063.jpeg>
-<a0,fr62>
-<anim/FM/frame_0064.jpeg, id=357, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0064.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0064.jpeg>
-Package pdftex.def Info: anim/FM/frame_0064.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0064.jpeg> <a0,fr63>
-<anim/FM/frame_0065.jpeg, id=360, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0065.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0065.jpeg>
-Package pdftex.def Info: anim/FM/frame_0065.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0065.jpeg>
-<a0,fr64>
-<anim/FM/frame_0066.jpeg, id=363, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0066.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0066.jpeg>
-Package pdftex.def Info: anim/FM/frame_0066.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0066.jpeg> <a0,fr65>
-<anim/FM/frame_0067.jpeg, id=366, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0067.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0067.jpeg>
-Package pdftex.def Info: anim/FM/frame_0067.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0067.jpeg>
-<a0,fr66>
-<anim/FM/frame_0068.jpeg, id=369, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0068.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0068.jpeg>
-Package pdftex.def Info: anim/FM/frame_0068.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0068.jpeg> <a0,fr67>
-<anim/FM/frame_0069.jpeg, id=372, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0069.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0069.jpeg>
-Package pdftex.def Info: anim/FM/frame_0069.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0069.jpeg>
-<a0,fr68>
-<anim/FM/frame_0070.jpeg, id=375, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0070.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0070.jpeg>
-Package pdftex.def Info: anim/FM/frame_0070.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0070.jpeg> <a0,fr69>
-<anim/FM/frame_0071.jpeg, id=378, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0071.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0071.jpeg>
-Package pdftex.def Info: anim/FM/frame_0071.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0071.jpeg>
-<a0,fr70>
-<anim/FM/frame_0072.jpeg, id=381, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0072.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0072.jpeg>
-Package pdftex.def Info: anim/FM/frame_0072.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0072.jpeg> <a0,fr71>
-<anim/FM/frame_0073.jpeg, id=384, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0073.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0073.jpeg>
-Package pdftex.def Info: anim/FM/frame_0073.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0073.jpeg>
-<a0,fr72>
-<anim/FM/frame_0074.jpeg, id=387, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0074.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0074.jpeg>
-Package pdftex.def Info: anim/FM/frame_0074.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0074.jpeg> <a0,fr73>
-<anim/FM/frame_0075.jpeg, id=390, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0075.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0075.jpeg>
-Package pdftex.def Info: anim/FM/frame_0075.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0075.jpeg>
-<a0,fr74>
-<anim/FM/frame_0076.jpeg, id=393, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0076.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0076.jpeg>
-Package pdftex.def Info: anim/FM/frame_0076.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0076.jpeg> <a0,fr75>
-<anim/FM/frame_0077.jpeg, id=396, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0077.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0077.jpeg>
-Package pdftex.def Info: anim/FM/frame_0077.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0077.jpeg>
-<a0,fr76>
-<anim/FM/frame_0078.jpeg, id=399, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0078.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0078.jpeg>
-Package pdftex.def Info: anim/FM/frame_0078.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0078.jpeg> <a0,fr77>
-<anim/FM/frame_0079.jpeg, id=402, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0079.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0079.jpeg>
-Package pdftex.def Info: anim/FM/frame_0079.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0079.jpeg>
-<a0,fr78>
-<anim/FM/frame_0080.jpeg, id=405, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0080.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0080.jpeg>
-Package pdftex.def Info: anim/FM/frame_0080.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0080.jpeg> <a0,fr79>
-<anim/FM/frame_0081.jpeg, id=408, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0081.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0081.jpeg>
-Package pdftex.def Info: anim/FM/frame_0081.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0081.jpeg>
-<a0,fr80>
-<anim/FM/frame_0082.jpeg, id=411, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0082.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0082.jpeg>
-Package pdftex.def Info: anim/FM/frame_0082.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0082.jpeg> <a0,fr81>
-<anim/FM/frame_0083.jpeg, id=414, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0083.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0083.jpeg>
-Package pdftex.def Info: anim/FM/frame_0083.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0083.jpeg>
-<a0,fr82>
-<anim/FM/frame_0084.jpeg, id=417, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0084.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0084.jpeg>
-Package pdftex.def Info: anim/FM/frame_0084.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0084.jpeg> <a0,fr83>
-<anim/FM/frame_0085.jpeg, id=420, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0085.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0085.jpeg>
-Package pdftex.def Info: anim/FM/frame_0085.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0085.jpeg>
-<a0,fr84>
-<anim/FM/frame_0086.jpeg, id=423, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0086.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0086.jpeg>
-Package pdftex.def Info: anim/FM/frame_0086.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0086.jpeg> <a0,fr85>
-<anim/FM/frame_0087.jpeg, id=426, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0087.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0087.jpeg>
-Package pdftex.def Info: anim/FM/frame_0087.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0087.jpeg>
-<a0,fr86>
-<anim/FM/frame_0088.jpeg, id=429, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0088.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0088.jpeg>
-Package pdftex.def Info: anim/FM/frame_0088.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0088.jpeg> <a0,fr87>
-<anim/FM/frame_0089.jpeg, id=432, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0089.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0089.jpeg>
-Package pdftex.def Info: anim/FM/frame_0089.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0089.jpeg>
-<a0,fr88>
-<anim/FM/frame_0090.jpeg, id=435, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0090.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0090.jpeg>
-Package pdftex.def Info: anim/FM/frame_0090.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0090.jpeg> <a0,fr89>
-<anim/FM/frame_0091.jpeg, id=438, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0091.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0091.jpeg>
-Package pdftex.def Info: anim/FM/frame_0091.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0091.jpeg>
-<a0,fr90>
-<anim/FM/frame_0092.jpeg, id=441, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0092.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0092.jpeg>
-Package pdftex.def Info: anim/FM/frame_0092.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0092.jpeg> <a0,fr91>
-<anim/FM/frame_0093.jpeg, id=444, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0093.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0093.jpeg>
-Package pdftex.def Info: anim/FM/frame_0093.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0093.jpeg>
-<a0,fr92>
-<anim/FM/frame_0094.jpeg, id=447, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0094.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0094.jpeg>
-Package pdftex.def Info: anim/FM/frame_0094.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0094.jpeg> <a0,fr93>
-<anim/FM/frame_0095.jpeg, id=450, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0095.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0095.jpeg>
-Package pdftex.def Info: anim/FM/frame_0095.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0095.jpeg>
-<a0,fr94>
-<anim/FM/frame_0096.jpeg, id=453, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0096.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0096.jpeg>
-Package pdftex.def Info: anim/FM/frame_0096.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0096.jpeg> <a0,fr95>
-<anim/FM/frame_0097.jpeg, id=456, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0097.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0097.jpeg>
-Package pdftex.def Info: anim/FM/frame_0097.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0097.jpeg>
-<a0,fr96>
-<anim/FM/frame_0098.jpeg, id=459, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0098.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0098.jpeg>
-Package pdftex.def Info: anim/FM/frame_0098.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0098.jpeg> <a0,fr97>
-<anim/FM/frame_0099.jpeg, id=462, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0099.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0099.jpeg>
-Package pdftex.def Info: anim/FM/frame_0099.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0099.jpeg>
-<a0,fr98>
-<anim/FM/frame_0100.jpeg, id=465, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0100.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0100.jpeg>
-Package pdftex.def Info: anim/FM/frame_0100.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0100.jpeg> <a0,fr99>
-<anim/FM/frame_0101.jpeg, id=468, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0101.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0101.jpeg>
-Package pdftex.def Info: anim/FM/frame_0101.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0101.jpeg>
-<a0,fr100>
-<anim/FM/frame_0102.jpeg, id=471, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0102.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0102.jpeg>
-Package pdftex.def Info: anim/FM/frame_0102.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0102.jpeg> <a0,fr101>
-<anim/FM/frame_0103.jpeg, id=474, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0103.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0103.jpeg>
-Package pdftex.def Info: anim/FM/frame_0103.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0103.jpeg>
-<a0,fr102>
-<anim/FM/frame_0104.jpeg, id=477, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0104.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0104.jpeg>
-Package pdftex.def Info: anim/FM/frame_0104.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0104.jpeg> <a0,fr103>
-<anim/FM/frame_0105.jpeg, id=480, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0105.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0105.jpeg>
-Package pdftex.def Info: anim/FM/frame_0105.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0105.jpeg>
-<a0,fr104>
-<anim/FM/frame_0106.jpeg, id=483, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0106.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0106.jpeg>
-Package pdftex.def Info: anim/FM/frame_0106.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0106.jpeg> <a0,fr105>
-<anim/FM/frame_0107.jpeg, id=486, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0107.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0107.jpeg>
-Package pdftex.def Info: anim/FM/frame_0107.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0107.jpeg>
-<a0,fr106>
-<anim/FM/frame_0108.jpeg, id=489, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0108.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0108.jpeg>
-Package pdftex.def Info: anim/FM/frame_0108.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0108.jpeg> <a0,fr107>
-<anim/FM/frame_0109.jpeg, id=492, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0109.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0109.jpeg>
-Package pdftex.def Info: anim/FM/frame_0109.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0109.jpeg>
-<a0,fr108>
-<anim/FM/frame_0110.jpeg, id=495, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0110.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0110.jpeg>
-Package pdftex.def Info: anim/FM/frame_0110.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0110.jpeg> <a0,fr109>
-<anim/FM/frame_0111.jpeg, id=498, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0111.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0111.jpeg>
-Package pdftex.def Info: anim/FM/frame_0111.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0111.jpeg>
-<a0,fr110>
-<anim/FM/frame_0112.jpeg, id=501, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0112.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0112.jpeg>
-Package pdftex.def Info: anim/FM/frame_0112.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0112.jpeg> <a0,fr111>
-<anim/FM/frame_0113.jpeg, id=504, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0113.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0113.jpeg>
-Package pdftex.def Info: anim/FM/frame_0113.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0113.jpeg>
-<a0,fr112>
-<anim/FM/frame_0114.jpeg, id=507, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0114.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0114.jpeg>
-Package pdftex.def Info: anim/FM/frame_0114.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0114.jpeg> <a0,fr113>
-<anim/FM/frame_0115.jpeg, id=510, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0115.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0115.jpeg>
-Package pdftex.def Info: anim/FM/frame_0115.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0115.jpeg>
-<a0,fr114>
-<anim/FM/frame_0116.jpeg, id=513, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0116.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0116.jpeg>
-Package pdftex.def Info: anim/FM/frame_0116.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0116.jpeg> <a0,fr115>
-<anim/FM/frame_0117.jpeg, id=516, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0117.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0117.jpeg>
-Package pdftex.def Info: anim/FM/frame_0117.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0117.jpeg>
-<a0,fr116>
-<anim/FM/frame_0118.jpeg, id=519, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0118.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0118.jpeg>
-Package pdftex.def Info: anim/FM/frame_0118.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0118.jpeg> <a0,fr117>
-<anim/FM/frame_0119.jpeg, id=522, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0119.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0119.jpeg>
-Package pdftex.def Info: anim/FM/frame_0119.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0119.jpeg>
-<a0,fr118>
-<anim/FM/frame_0120.jpeg, id=525, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0120.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0120.jpeg>
-Package pdftex.def Info: anim/FM/frame_0120.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0120.jpeg> <a0,fr119>
-<anim/FM/frame_0121.jpeg, id=528, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0121.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0121.jpeg>
-Package pdftex.def Info: anim/FM/frame_0121.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0121.jpeg>
-<a0,fr120>
-<anim/FM/frame_0122.jpeg, id=531, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0122.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0122.jpeg>
-Package pdftex.def Info: anim/FM/frame_0122.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0122.jpeg> <a0,fr121>
-<anim/FM/frame_0123.jpeg, id=534, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0123.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0123.jpeg>
-Package pdftex.def Info: anim/FM/frame_0123.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0123.jpeg>
-<a0,fr122>
-<anim/FM/frame_0124.jpeg, id=537, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0124.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0124.jpeg>
-Package pdftex.def Info: anim/FM/frame_0124.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0124.jpeg> <a0,fr123>
-<anim/FM/frame_0125.jpeg, id=540, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0125.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0125.jpeg>
-Package pdftex.def Info: anim/FM/frame_0125.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0125.jpeg>
-<a0,fr124>
-<anim/FM/frame_0126.jpeg, id=543, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0126.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0126.jpeg>
-Package pdftex.def Info: anim/FM/frame_0126.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0126.jpeg> <a0,fr125>
-<anim/FM/frame_0127.jpeg, id=546, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0127.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0127.jpeg>
-Package pdftex.def Info: anim/FM/frame_0127.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0127.jpeg>
-<a0,fr126>
-<anim/FM/frame_0128.jpeg, id=549, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0128.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0128.jpeg>
-Package pdftex.def Info: anim/FM/frame_0128.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0128.jpeg> <a0,fr127>
-<anim/FM/frame_0129.jpeg, id=552, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0129.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0129.jpeg>
-Package pdftex.def Info: anim/FM/frame_0129.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0129.jpeg>
-<a0,fr128>
-<anim/FM/frame_0130.jpeg, id=555, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0130.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0130.jpeg>
-Package pdftex.def Info: anim/FM/frame_0130.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0130.jpeg> <a0,fr129>
-<anim/FM/frame_0131.jpeg, id=558, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0131.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0131.jpeg>
-Package pdftex.def Info: anim/FM/frame_0131.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0131.jpeg>
-<a0,fr130>
-<anim/FM/frame_0132.jpeg, id=561, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0132.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0132.jpeg>
-Package pdftex.def Info: anim/FM/frame_0132.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0132.jpeg> <a0,fr131>
-<anim/FM/frame_0133.jpeg, id=564, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0133.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0133.jpeg>
-Package pdftex.def Info: anim/FM/frame_0133.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0133.jpeg>
-<a0,fr132>
-<anim/FM/frame_0134.jpeg, id=567, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0134.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0134.jpeg>
-Package pdftex.def Info: anim/FM/frame_0134.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0134.jpeg> <a0,fr133>
-<anim/FM/frame_0135.jpeg, id=570, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0135.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0135.jpeg>
-Package pdftex.def Info: anim/FM/frame_0135.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0135.jpeg>
-<a0,fr134>
-<anim/FM/frame_0136.jpeg, id=573, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0136.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0136.jpeg>
-Package pdftex.def Info: anim/FM/frame_0136.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0136.jpeg> <a0,fr135>
-<anim/FM/frame_0137.jpeg, id=576, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0137.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0137.jpeg>
-Package pdftex.def Info: anim/FM/frame_0137.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0137.jpeg>
-<a0,fr136>
-<anim/FM/frame_0138.jpeg, id=579, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0138.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0138.jpeg>
-Package pdftex.def Info: anim/FM/frame_0138.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0138.jpeg> <a0,fr137>
-<anim/FM/frame_0139.jpeg, id=582, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0139.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0139.jpeg>
-Package pdftex.def Info: anim/FM/frame_0139.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0139.jpeg>
-<a0,fr138>
-<anim/FM/frame_0140.jpeg, id=585, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0140.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0140.jpeg>
-Package pdftex.def Info: anim/FM/frame_0140.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0140.jpeg> <a0,fr139>
-<anim/FM/frame_0141.jpeg, id=588, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0141.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0141.jpeg>
-Package pdftex.def Info: anim/FM/frame_0141.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0141.jpeg>
-<a0,fr140>
-<anim/FM/frame_0142.jpeg, id=591, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0142.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0142.jpeg>
-Package pdftex.def Info: anim/FM/frame_0142.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0142.jpeg> <a0,fr141>
-<anim/FM/frame_0143.jpeg, id=594, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0143.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0143.jpeg>
-Package pdftex.def Info: anim/FM/frame_0143.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0143.jpeg>
-<a0,fr142>
-<anim/FM/frame_0144.jpeg, id=597, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0144.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0144.jpeg>
-Package pdftex.def Info: anim/FM/frame_0144.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0144.jpeg> <a0,fr143>
-<anim/FM/frame_0145.jpeg, id=600, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0145.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0145.jpeg>
-Package pdftex.def Info: anim/FM/frame_0145.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0145.jpeg>
-<a0,fr144>
-<anim/FM/frame_0146.jpeg, id=603, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0146.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0146.jpeg>
-Package pdftex.def Info: anim/FM/frame_0146.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0146.jpeg> <a0,fr145> <a0,fr146> <a0,fr147>
-<a0,fr148>
-<anim/FM/frame_0150.jpeg, id=606, 722.7pt x 406.51875pt>
-File: anim/FM/frame_0150.jpeg Graphic file (type jpg)
-<use anim/FM/frame_0150.jpeg>
-Package pdftex.def Info: anim/FM/frame_0150.jpeg  used on input line 79.
-(pdftex.def)             Requested size: 722.69823pt x 406.51775pt.
- <./anim/FM/frame_0150.jpeg> <a0,fr149>
 
 [5
 
@@ -2306,32 +1315,16 @@ Package pdftex.def Info: anim/FM/frame_0150.jpeg  used on input line 79.
 [6
 
 ]
-<images/data.jpeg, id=822, 698.61pt x 629.35126pt>
-File: images/data.jpeg Graphic file (type jpg)
-<use images/data.jpeg>
-Package pdftex.def Info: images/data.jpeg  used on input line 113.
-(pdftex.def)             Requested size: 119.80544pt x 107.9198pt.
-<images/path_design.jpeg, id=823, 699.61375pt x 630.355pt>
-File: images/path_design.jpeg Graphic file (type jpg)
-<use images/path_design.jpeg>
-Package pdftex.def Info: images/path_design.jpeg  used on input line 113.
-(pdftex.def)             Requested size: 119.80544pt x 107.93802pt.
-<images/training.jpeg, id=824, 693.59125pt x 628.3475pt>
-File: images/training.jpeg Graphic file (type jpg)
-<use images/training.jpeg>
-Package pdftex.def Info: images/training.jpeg  used on input line 113.
-(pdftex.def)             Requested size: 119.80544pt x 108.53387pt.
-<images/sampling.jpeg, id=825, 689.57625pt x 625.33624pt>
-File: images/sampling.jpeg Graphic file (type jpg)
-<use images/sampling.jpeg>
-Package pdftex.def Info: images/sampling.jpeg  used on input line 113.
-(pdftex.def)             Requested size: 119.80544pt x 108.64351pt.
+<images/rejection.png, id=239, 254.45062pt x 133.24782pt>
+File: images/rejection.png Graphic file (type png)
+<use images/rejection.png>
+Package pdftex.def Info: images/rejection.png  used on input line 65.
+(pdftex.def)             Requested size: 217.62448pt x 113.96669pt.
 
 
 [7
 
- <./images/data.jpeg> <./images/path_design.jpeg> <./images/training.jpeg> <./i
-mages/sampling.jpeg>]
+ <./images/rejection.png>]
 
 [8
 
@@ -2348,32 +1341,10 @@ mages/sampling.jpeg>]
 [11
 
 ]
-<images/cond_path.jpeg, id=968, 629.35126pt x 595.22375pt>
-File: images/cond_path.jpeg Graphic file (type jpg)
-<use images/cond_path.jpeg>
-Package pdftex.def Info: images/cond_path.jpeg  used on input line 232.
-(pdftex.def)             Requested size: 102.68962pt x 97.1178pt.
-<images/marg_path.jpeg, id=969, 591.20876pt x 575.14874pt>
-File: images/marg_path.jpeg Graphic file (type jpg)
-<use images/marg_path.jpeg>
-Package pdftex.def Info: images/marg_path.jpeg  used on input line 232.
-(pdftex.def)             Requested size: 102.68962pt x 99.8978pt.
-<images/cond_vel.jpeg, id=970, 603.25375pt x 580.1675pt>
-File: images/cond_vel.jpeg Graphic file (type jpg)
-<use images/cond_vel.jpeg>
-Package pdftex.def Info: images/cond_vel.jpeg  used on input line 232.
-(pdftex.def)             Requested size: 102.68962pt x 98.75995pt.
-<images/marg_vel.jpeg, id=971, 611.28375pt x 586.19pt>
-File: images/marg_vel.jpeg Graphic file (type jpg)
-<use images/marg_vel.jpeg>
-Package pdftex.def Info: images/marg_vel.jpeg  used on input line 232.
-(pdftex.def)             Requested size: 102.68962pt x 98.47029pt.
-
 
 [12
 
- <./images/cond_path.jpeg> <./images/marg_path.jpeg> <./images/cond_vel.jpeg> <
-./images/marg_vel.jpeg>]
+]
 
 [13
 
@@ -2386,18 +1357,145 @@ Package pdftex.def Info: images/marg_vel.jpeg  used on input line 232.
 [15
 
 ]
-<images/fm_scheme.jpeg, id=1114, 1028.84375pt x 558.085pt>
-File: images/fm_scheme.jpeg Graphic file (type jpg)
-<use images/fm_scheme.jpeg>
-Package pdftex.def Info: images/fm_scheme.jpeg  used on input line 358.
-(pdftex.def)             Requested size: 342.2953pt x 185.67589pt.
-
 
 [16
 
- <./images/fm_scheme.jpeg>]
+]
 
 [17
+
+]
+
+[18
+
+]
+
+[19
+
+]
+
+[20
+
+]
+
+[21
+
+]
+
+[22
+
+]
+
+[23
+
+]
+
+[24
+
+]
+
+LaTeX Font Warning: Font shape `T2A/cmss/b/n' undefined
+(Font)              using `T2A/cmss/m/n' instead on input line 202.
+
+
+
+[25
+
+]
+
+[26
+
+]
+
+[27
+
+]
+
+[28
+
+]
+
+[29
+
+]
+
+[30
+
+]
+
+[31
+
+]
+
+[32
+
+]
+Overfull \hbox (11.38597pt too wide) in paragraph at lines 250--250
+[]\T2A/cmss/bx/n/10 Совместимость
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 250--250
+[]\T2A/cmss/b/n/10 Аналитическая
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 250--250
+\T2A/cmss/b/n/10 пост-обработка
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 250--250
+[]\T2A/cmss/b/n/10 Только MoG-
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 250--250
+[]\T2A/cmss/b/n/10 Низкая гиб-
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 250--250
+[]\T2A/cmss/b/n/10 Нет (ну-жен
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 250--250
+[]\T2A/cmss/b/n/10 Высокая дис-
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 250--250
+[]\T2A/cmss/b/n/10 Нет (ну-жен
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 250--250
+[]\T2A/cmss/b/n/10 Контрастивная
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 250--250
+[]\T2A/cmss/b/n/10 Leakage, боль-
+ []
+
+
+Underfull \hbox (badness 1895) in paragraph at lines 250--250
+[]\T2A/cmss/b/n/10 Нет (до-ро-гой
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 250--250
+[]\T2A/cmss/b/n/10 Усечение
+ []
+
+
+
+[33
+
+]
+
+[34
 
 ]
 \tf@nav=\write6
@@ -2414,43 +1512,44 @@ Package pdftex.def Info: images/fm_scheme.jpeg  used on input line 358.
 LaTeX2e <2025-06-01> patch level 1
 L3 programming layer <2025-09-02>
  ***********
+
+
+LaTeX Font Warning: Some font shapes were not available, defaults substituted.
+
 Package rerunfilecheck Info: File `main.out' has not changed.
-(rerunfilecheck)             Checksum: 5305BFDB8512909D554CF53B53C2DFF1;361.
+(rerunfilecheck)             Checksum: 6BF4E1DD4957FE900D9BCC9854536CF5;1375.
  ) ) 
 Here is how much of TeX's memory you used:
- 28028 strings out of 468129
- 567729 string characters out of 5429643
- 907778 words of memory out of 5000000
- 56056 multiletter control sequences out of 15000+600000
- 657671 words of font info for 120 fonts, out of 8000000 for 9000
+ 24207 strings out of 468129
+ 470699 string characters out of 5429643
+ 849739 words of memory out of 5000000
+ 52238 multiletter control sequences out of 15000+600000
+ 644888 words of font info for 84 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 133i,15n,126p,408b,1271s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 133i,15n,126p,435b,737s stack positions out of 10000i,1000n,20000p,200000b,200000s
  <C:\Users\Mikhail\AppData\Local\MiKTeX\fonts/pk/ljfour/lh/lh-t2a/dpi600\la
-sx1095.pk> <C:\Users\Mikhail\AppData\Local\MiKTeX\fonts/pk/ljfour/lh/lh-t2a/dpi
-600\lass1200.pk> <C:\Users\Mikhail\AppData\Local\MiKTeX\fonts/pk/ljfour/lh/lh-t
-2a/dpi600\lass0800.pk> <C:\Users\Mikhail\AppData\Local\MiKTeX\fonts/pk/ljfour/l
-h/lh-t2a/dpi600\lasi1095.pk> <C:\Users\Mikhail\AppData\Local\MiKTeX\fonts/pk/lj
-four/lh/lh-t2a/dpi600\lass1095.pk> <C:\Users\Mikhail\AppData\Local\MiKTeX\fonts
-/pk/ljfour/lh/lh-t2a/dpi600\lass0600.pk> <C:\Users\Mikhail\AppData\Local\MiKTeX
-\fonts/pk/ljfour/lh/lh-t2a/dpi600\lass1440.pk><C:/Users/Mikhail/AppData/Local/P
-rograms/MiKTeX/fonts/type1/public/amsfonts/cm/cmex10.pfb><C:/Users/Mikhail/AppD
-ata/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi10.pfb><C:/Users/M
-ikhail/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi6.pfb><
-C:/Users/Mikhail/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/c
-mmi8.pfb><C:/Users/Mikhail/AppData/Local/Programs/MiKTeX/fonts/type1/public/ams
-fonts/cm/cmss10.pfb><C:/Users/Mikhail/AppData/Local/Programs/MiKTeX/fonts/type1
-/public/amsfonts/cm/cmss8.pfb><C:/Users/Mikhail/AppData/Local/Programs/MiKTeX/f
-onts/type1/public/amsfonts/cm/cmssi10.pfb><C:/Users/Mikhail/AppData/Local/Progr
-ams/MiKTeX/fonts/type1/public/amsfonts/cm/cmssi8.pfb><C:/Users/Mikhail/AppData/
-Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy10.pfb><C:/Users/Mikha
-il/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy6.pfb><C:/U
-sers/Mikhail/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy7
-.pfb><C:/Users/Mikhail/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfont
-s/cm/cmsy8.pfb><C:/Users/Mikhail/AppData/Local/Programs/MiKTeX/fonts/type1/publ
-ic/amsfonts/symbols/msbm10.pfb>
-Output written on main.pdf (17 pages, 6356685 bytes).
+ss1200.pk> <C:\Users\Mikhail\AppData\Local\MiKTeX\fonts/pk/ljfour/lh/lh-t2a/dpi
+600\lasx1000.pk> <C:\Users\Mikhail\AppData\Local\MiKTeX\fonts/pk/ljfour/lh/lh-t
+2a/dpi600\lass0700.pk> <C:\Users\Mikhail\AppData\Local\MiKTeX\fonts/pk/ljfour/l
+h/lh-t2a/dpi600\lass0500.pk> <C:\Users\Mikhail\AppData\Local\MiKTeX\fonts/pk/lj
+four/lh/lh-t2a/dpi600\lass1000.pk> <C:\Users\Mikhail\AppData\Local\MiKTeX\fonts
+/pk/ljfour/lh/lh-t2a/dpi600\lass1440.pk><C:/Users/Mikhail/AppData/Local/Program
+s/MiKTeX/fonts/type1/public/amsfonts/cm/cmex10.pfb><C:/Users/Mikhail/AppData/Lo
+cal/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi10.pfb><C:/Users/Mikhail
+/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi5.pfb><C:/Use
+rs/Mikhail/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi7.p
+fb><C:/Users/Mikhail/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/
+cm/cmss10.pfb><C:/Users/Mikhail/AppData/Local/Programs/MiKTeX/fonts/type1/publi
+c/amsfonts/cm/cmss8.pfb><C:/Users/Mikhail/AppData/Local/Programs/MiKTeX/fonts/t
+ype1/public/amsfonts/cm/cmssi10.pfb><C:/Users/Mikhail/AppData/Local/Programs/Mi
+KTeX/fonts/type1/public/amsfonts/cm/cmssi8.pfb><C:/Users/Mikhail/AppData/Local/
+Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy10.pfb><C:/Users/Mikhail/App
+Data/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy7.pfb><C:/Users/M
+ikhail/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/symbols/msbm10
+.pfb>
+Output written on main.pdf (34 pages, 478418 bytes).
 PDF statistics:
- 1457 PDF objects out of 1728 (max. 8388607)
- 37 named destinations out of 1000 (max. 500000)
- 1865 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 1538 PDF objects out of 1728 (max. 8388607)
+ 75 named destinations out of 1000 (max. 500000)
+ 774 words of extra memory for PDF output out of 10000 (max. 10000000)
 

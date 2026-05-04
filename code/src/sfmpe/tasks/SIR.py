@@ -171,7 +171,10 @@ class SIRTask(Task):
             # clamp_max = torch.tensor([sir_task.prior.beta_range[1], sir_task.prior.gamma_range[1]])
             clamp_min = torch.tensor([0.025, 0.05])
             clamp_max = torch.tensor([2.5, 0.5])
-            return (theta >= clamp_min) & (theta <= clamp_max) 
+            mask = (theta >= clamp_min) & (theta <= clamp_max)
+            while len(mask.shape) > 1:
+                mask = mask.all(dim=-1)
+            return  mask
 
         self.check_support = check_support
         

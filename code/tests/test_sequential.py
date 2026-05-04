@@ -84,7 +84,7 @@ from sfmpe.data.simulation_store import SimulationStore
 def test_simulation_store(sir_task):
     assert sir_task is not None
 
-    store = SimulationStore()
+    store = SimulationStore("./code/tests/test_datasets")
     theta, x = sir_task.simulate_dataset((1, 2,))
     store.add(theta, x, 0)
     theta, x = sir_task.simulate_dataset((1, 1,))
@@ -99,7 +99,7 @@ from sfmpe.data.round_dataset import RoundDataset
 def test_train(sir_task, fm_estimator):
     assert sir_task is not None
 
-    store = SimulationStore()
+    store = SimulationStore("./code/tests/test_datasets")
     theta, x = sir_task.simulate_dataset((100, 2,))
     store.add(theta, x, 0)
     theta, x = sir_task.simulate_dataset((100, 2,))

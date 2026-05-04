@@ -18,6 +18,7 @@ class RoundManager:
         validator=None,
         device="cpu",
         logger=None,
+        storage_dir="."
     ):
 
         self.task = task
@@ -34,7 +35,7 @@ class RoundManager:
         else:
             self.logger = logger
 
-        self.store = SimulationStore()
+        self.store = SimulationStore(storage_dir)
         self.losses = []
         
         # Log initialization
@@ -51,7 +52,7 @@ class RoundManager:
         # sample parameters
         self.logger.debug(f"Proposal distribution: {self.proposal}")
 
-        if round_id == 0:
+        if self.proposal == self.task.prior:
             # theta = self.proposal.sample((sims_per_round, *self.proposal_params.x_0.shape[:-1]), device=self.device)
             theta = self.clean_sample((sims_per_round, *self.proposal_params.x_0.shape[:-1]))
         else:
@@ -64,6 +65,12 @@ class RoundManager:
 
         # simulate data
         # TODO: сделать очистку от nan
+        hasnan = torch.isnan(theta)
+        while len(hasnan.shape) > 1:
+            hasnan = hasnan.any(dim=-1)
+        if hasnan.any():
+            self.logger.info(f"Stopping round {round_id} because theta has nan")
+            return -1
         x = self.task.simulator.simulate(theta)
         self.logger.debug(f"Simulated data with shape: {x.shape}")
 
@@ -93,6 +100,9 @@ class RoundManager:
         return loss_stats
     
     def build_posterior(self):
+        new_x_0 = self.task.simulate(self.proposal_params.theta_0)
+        new_x_0 = self.task.summarize(new_x_0)
+        self.proposal_params.x_0 = new_x_0
         return self.estimator.build_posterior(self.proposal_params)
     
     def update_proposal(self, posterior):
@@ -118,7 +128,13 @@ class RoundManager:
 
             self.logger.info(f"--- Round {r}/{num_rounds} ---")
 
-            self.run_round(r, sims_per_round)
+            out = self.run_round(r, sims_per_round)
+            # if r == 1:
+            #     self.task.summary.eval() 
+            
+            if out == -1:
+                self.logger.info("Stopping sequential due to posterior extreme shrinkage...")
+                return -1
 
             self.losses += self.train_estimator([r], **train_kwargs)
             # if torch.isnan(torch.tensor(self.losses[-1])):
@@ -218,20 +234,24 @@ class RoundManager:
                 total -= self.buffer_len
                 # self.logger.debug("second")
                 
-
-            while total > 0:
+            BRAKE_NUM = 5*total
+            i = 0
+            left = total
+            while left > 0:
                 raw = self.proposal.sample(shape, device=self.device)
                 raw_shape = raw.shape
                 _add_clean(raw)
-                take = min(total, self.buffer_len)
+                take = min(left, self.buffer_len)
                 # self.logger.debug(f"third, {raw.shape}")
-                
+                i += take
                 if take > 0:
                     result_parts.append(_pop_from_buffer(take))
-                    total -= take
-                    # self.logger.debug("fourth")
-                # self.logger.info(f"Generated clean samples {len(result_parts)} in total")
-                
+                    left -= take
+                if (left // 100 * 100) % (total // 10) == 0:
+                    self.logger.info(f"{left} left to sample")
+                if i > BRAKE_NUM:
+                    self.logger.info(f"Number of simulations reached limit")
+                    return torch.tensor([None])
 
             # Склеиваем все части
             self.logger.debug(f"{len(result_parts)}, {result_parts[0].shape}")

@@ -38,7 +38,7 @@ class FlowMatchingEstimator:
         self.device       = kwargs.pop('device', 'cpu')
         self.epochs       = kwargs.pop('epochs', 1000)
         self.path         = kwargs.pop('path', None)
-        self.batch_size   = kwargs.pop('batch_size', len(dataset.x) // self.epochs)
+        self.batch_size   = kwargs.pop('batch_size', 256)
         self.show_every   = kwargs.pop('show_every', None)
 
         if kwargs:
@@ -59,12 +59,12 @@ class FlowMatchingEstimator:
         for epoch in range(self.epochs + 1):
             
             
-            theta_1, x = self.dataset_prepocessor(dataset.theta, dataset.x) 
+            theta_1, x = dataset.theta, dataset.x
             if check_nan(theta_1, "dataset theta_1"):
                 raise ValueError("Captured None")
             if check_nan(x, "dataset x"):
                 raise ValueError("Captured None")
-            theta_0 = self.flow_model.init_dist.sample(theta_1.shape).to(self.device)
+            theta_0 = self.flow_model.init_dist.sample_like(theta_1).to(self.device)
             if check_nan(theta_0, "theta_0"):
                 raise ValueError("Captured None")
 
@@ -78,7 +78,10 @@ class FlowMatchingEstimator:
             if check_nan(dtheta_t, "dtheta_t"):
                 raise ValueError("Captured None")
 
-            v = self.flow_model.velocity_model(t=t, theta=theta_t, x=x)
+            mask = (torch.rand(*x.shape[:-1]) > 0.1)
+            x_masked =  x * mask.unsqueeze(-1).expand(*mask.shape, x.shape[-1])
+            v = 0.999 * self.flow_model.velocity_model(t=t, theta=theta_t, x=x_masked) +\
+                0.001 * self.flow_model.velocity_model(t=t, theta=theta_t, x=torch.zeros_like(x)) 
             if check_nan(v, "v"):
                 raise ValueError("Captured None")
             loss = self.loss_fn(v, dtheta_t)

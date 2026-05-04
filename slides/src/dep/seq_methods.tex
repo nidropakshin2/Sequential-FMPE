@@ -1,0 +1,138 @@
+\documentclass[10pt,aspectratio=169]{beamer}
+\usepackage[T2A]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[russian]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{listings}
+
+\usetheme{Madrid}
+\usecolortheme{default}
+
+\title{Последовательные методы в Simulation‑Based Inference}
+\subtitle{Применимость Sequential методов к FMPE и дрейф эмбеддинга}
+\date{\today}
+
+\begin{document}
+
+\frame{\titlepage}
+
+\begin{frame}{Содержание}
+\tableofcontents
+\end{frame}
+
+\section{Обзор последовательных SNPE методов}
+
+\begin{frame}{Семейство Sequential Neural Posterior Estimation}
+Классические методы коррекции смещения, возникающего при итеративном сужении proposal:
+\begin{itemize}
+    \item \textbf{SNPE‑A} (Papamakarios \& Murray, 2016) – точная коррекция для MoG.
+    \item \textbf{SNPE‑B} (Lueckmann et al., 2017) – взвешивание по важности.
+    \item \textbf{SNPE‑C / APT} (Greenberg et al., 2019) – контрастивная потеря (InfoNCE).
+    \item \textbf{Truncated SNPE} (Deistler et al., 2022) – усечение proposal по априору.
+\end{itemize}
+\pause
+Общая идея: на раунде $t$ сэмплируем $\theta \sim \tilde{p}_t(\theta)$, генерируем $x$ и обучаем $q_\phi(\theta|x)$, избегая смещения.
+\end{frame}
+
+\begin{frame}{Что требуется от модели $q_\phi(\theta|x)$}
+Во всех SNPE нужно уметь:
+\begin{itemize}
+    \item Сэмплировать $\theta \sim q_\phi(\theta|x_o)$ (proposal).
+    \item \textbf{Но также считать} $\log q_\phi(\theta|x)$:
+    \begin{itemize}
+        \item В SNPE‑A/B – для коррекции смещения/весов.
+        \item В SNPE‑C (APT) – для вычисления контрастивной потери InfoNCE.
+    \end{itemize}
+\end{itemize}
+\pause
+Таким образом, ключевое требование к параметрической модели – быстрый доступ к логарифму плотности.
+\end{frame}
+
+\section{Особенности FMPE}
+
+\begin{frame}{Flow Matching Posterior Estimation}
+FMPE (Dax et al., 2023) – генеративная модель, основанная на Flow Matching.
+\begin{itemize}
+    \item Позволяет сэмплировать из $q_\phi(\theta|x)$ очень быстро (прямое интегрирование ODE).
+    \item Плотность $\log q_\phi(\theta|x)$ \textbf{существует}, но её вычисление требует обратного интегрирования ODE с расчётом следа якобиана – \textbf{дорого}.
+\end{itemize}
+\pause
+Обучение FMPE идёт через Conditional Flow Matching (CFM) – нужны только сэмплы и векторное поле, \textbf{логарифм плотности не используется}.
+\end{frame}
+
+\section{Применимость SNPE к FMPE}
+
+\begin{frame}{Какие методы не подходят}
+\begin{itemize}
+    \item \textbf{SNPE‑A} и \textbf{SNPE‑B}: требуют $\log \tilde{p}(\theta)$ (плотности proposal) или $\log q_\phi(\theta|x)$ – для FMPE это вычислительный bottleneck.
+    \item \textbf{SNPE‑C (APT)}: вопреки интуиции, \textbf{тоже требует} $\log q_\phi(\theta|x)$ в потере InfoNCE:
+    \[
+    \mathcal{L}_{\text{InfoNCE}} = -\frac{1}{K}\sum_{k=1}^K \log \frac{\exp(\log q_\phi(\theta_k|x_k))}{\sum_j \exp(\log q_\phi(\theta_j|x_k))}
+    \]
+    Без быстрого логарифма обучение становится неэффективным.
+\end{itemize}
+\pause
+Вывод: прямое применение классических SNPE к FMPE невозможно без потери ключевого преимущества.
+\end{frame}
+
+\begin{frame}{Truncated Sequential NPE – единственный простой вариант}
+Метод Truncated (усечённый) не использует никаких явных плотностей:
+\begin{itemize}
+    \item Proposal $\tilde{p}_t(\theta)$ обрезается до границ априора.
+    \item Смещение отсутствует по построению, достаточно стандартной CFM‑потери.
+\end{itemize}
+\pause
+\textbf{Truncated FMPE}:
+\begin{enumerate}
+    \item Обучить FMPE на данных из априора (раунд 0).
+    \item Построить proposal = усечённый FMPE(·|$x_o$).
+    \item Сэмплировать из этого proposal, симулировать $x$, добавить в обучающую выборку.
+    \item Обучить FMPE заново или дообучить (с CFM‑лоссом) на всех данных.
+    \item Повторить с шага 2 с новым proposal.
+\end{enumerate}
+Никаких $\log q_\phi$ не требуется.
+\end{frame}
+
+\begin{frame}{Перспективы других sequential подходов}
+Авторы FMPE упоминают, что sequential NPE к FMPE «применим, но оставлен на будущее». Вероятные пути:
+\begin{itemize}
+    \item Использовать отдельный лёгкий суррогат для оценки $\log q_\phi$ (но вырастет сложность).
+    \item Перейти к sequential Neural Ratio Estimation (не требует плотности модели).
+    \item Разработать варианты APT с аппроксимацией $\log q_\phi$ без полного интегрирования ODE.
+\end{itemize}
+Пока Truncated FMPE – самый практичный выбор.
+\end{frame}
+
+\section{Дрейф эмбеддинга в sequential NPE}
+
+\begin{frame}{Проблема изменяющегося представления $x_o$}
+Если совместно с $q_\phi$ обучается summary‑сеть $h_\psi$:
+\begin{itemize}
+    \item На раунде $t$ используется представление $h_{\psi_t}(x_o)$.
+    \item При переходе к раунду $t+1$ веса $\psi$ обновляются, и $h_{\psi_{t+1}}(x_o) \neq h_{\psi_t}(x_o)$.
+    \item Proposal, основанный на старом представлении, становится несогласованным с новым.
+\end{itemize}
+\pause
+Это нарушает предположения sequential методов и может привести к смещению или расходимости.
+\end{frame}
+
+\begin{frame}{Как решается в библиотеке \texttt{sbi}}
+Стратегия по умолчанию:
+\begin{enumerate}
+    \item На первом раунде summary‑сеть обучается вместе с плотностью.
+    \item Начиная со второго раунда, \textbf{веса summary‑сети замораживаются}.
+    \item Пользователь может явно передать embedding\_net в density\_estimator, и \texttt{sbi} автоматически исключит её из оптимизатора после первого раунда.
+\end{enumerate}
+\pause
+Другие подходы:
+\begin{itemize}
+    \item Предобучение эмбеддинга и полная заморозка с самого начала.
+    \item Использование отдельного внешнего цикла для дообучения эмбеддинга (редко).
+\end{itemize}
+\end{frame}
+
+
+\end{document}

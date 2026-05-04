@@ -1,3 +1,7 @@
 \babel@toc {russian}{}\relax 
-\beamer@sectionintoc {1}{Основные идеи}{2}{0}{1}
-\beamer@sectionintoc {2}{От conditional к marginal loss}{8}{0}{2}
+\beamer@sectionintoc {1}{Постановка задачи и общая схема}{3}{0}{1}
+\beamer@sectionintoc {2}{SNPE-A (Papamakarios \& Murray, 2016)}{8}{0}{2}
+\beamer@sectionintoc {3}{SNPE-B (Lueckmann et al., 2017)}{13}{0}{3}
+\beamer@sectionintoc {4}{SNPE-C (APT, Greenberg et al., 2019)}{18}{0}{4}
+\beamer@sectionintoc {5}{Truncated Sequential NPE}{25}{0}{5}
+\beamer@sectionintoc {6}{Сравнительная таблица}{33}{0}{6}
