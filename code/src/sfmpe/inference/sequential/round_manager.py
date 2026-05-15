@@ -54,10 +54,10 @@ class RoundManager:
 
         if self.proposal == self.task.prior:
             # theta = self.proposal.sample((sims_per_round, *self.proposal_params.x_0.shape[:-1]), device=self.device)
-            theta = self.clean_sample((sims_per_round, *self.proposal_params.x_0.shape[:-1]))
+            theta = self.clean_sample((sims_per_round, *self.proposal_params.x_0.shape[:-1])).to(self.device)
         else:
             # theta = self.proposal.sample((sims_per_round, ), device=self.device)
-            theta = self.clean_sample((sims_per_round, ))
+            theta = self.clean_sample((sims_per_round, )).to(self.device)
 
         self.logger.debug(f"x_0 shape {self.proposal_params.x_0.shape[:-1]}")
         
@@ -71,11 +71,11 @@ class RoundManager:
         if hasnan.any():
             self.logger.info(f"Stopping round {round_id} because theta has nan")
             return -1
-        x = self.task.simulator.simulate(theta)
+        x = self.task.simulator.simulate(theta).to(self.device)
         self.logger.debug(f"Simulated data with shape: {x.shape}")
 
         # summary statistics
-        features = self.task.summary(x)
+        features = self.task.summary(x).to(self.device)
         self.logger.debug(f"Computed summary statistics with shape: {features.shape}")
 
         # store simulations

@@ -191,6 +191,7 @@ class StochVolTask(Task):
         self.logger_config = config.get("logger")
         super().__init__(device=device)
 
+        self.summary.to(device)
         # def check_support(theta):
         #     clamp_min = torch.tensor([self.prior_parameters.get(parameter, [0])[0] for parameter in self.prior_parameters.keys()])
         #     clamp_max = torch.tensor([self.prior_parameters.get(parameter, [0])[1] for parameter in self.prior_parameters.keys()])
