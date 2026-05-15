@@ -101,8 +101,8 @@ class RoundManager:
         return loss_stats
     
     def build_posterior(self):
-        new_x_0 = self.task.simulate(self.proposal_params.theta_0)
-        new_x_0 = self.task.summarize(new_x_0)
+        new_x_0 = self.task.simulate(self.proposal_params.theta_0).to(self.device)
+        new_x_0 = self.task.summarize(new_x_0).to(self.device)
         self.proposal_params.x_0 = new_x_0
         return self.estimator.build_posterior(self.proposal_params)
     
