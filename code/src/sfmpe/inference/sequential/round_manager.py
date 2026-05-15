@@ -75,6 +75,7 @@ class RoundManager:
         self.logger.debug(f"Simulated data with shape: {x.shape}")
 
         # summary statistics
+        self.task.summary.to(self.device)
         features = self.task.summary(x).to(self.device)
         self.logger.debug(f"Computed summary statistics with shape: {features.shape}")
 
