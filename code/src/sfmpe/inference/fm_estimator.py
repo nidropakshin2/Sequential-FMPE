@@ -40,6 +40,7 @@ class FlowMatchingEstimator:
         self.path         = kwargs.pop('path', None)
         self.batch_size   = kwargs.pop('batch_size', 256)
         self.show_every   = kwargs.pop('show_every', None)
+        self.cfg_mode     = kwargs.pop('cfg_mode', False)
 
         if kwargs:
             raise TypeError(f"train() got unexpected keyword arguments: {', '.join(kwargs.keys())}")
@@ -58,35 +59,37 @@ class FlowMatchingEstimator:
 
         for epoch in range(self.epochs + 1):
             
-            
             theta_1, x = dataset.theta, dataset.x
-            if check_nan(theta_1, "dataset theta_1"):
-                raise ValueError("Captured None")
-            if check_nan(x, "dataset x"):
-                raise ValueError("Captured None")
+            # if check_nan(theta_1, "dataset theta_1"):
+            #     raise ValueError("Captured None")
+            # if check_nan(x, "dataset x"):
+            #     raise ValueError("Captured None")
             theta_0 = self.flow_model.init_dist.sample_like(theta_1).to(self.device)
-            if check_nan(theta_0, "theta_0"):
-                raise ValueError("Captured None")
+            # if check_nan(theta_0, "theta_0"):
+            #     raise ValueError("Captured None")
 
             t = self.flow_model.path.time_dist.sample((*theta_0.shape[:-1], 1))
-            if check_nan(t, "t"):
-                raise ValueError("Captured None")
+            # if check_nan(t, "t"):
+            #     raise ValueError("Captured None")
             theta_t = self.flow_model.path.sample(theta_0, theta_1, t)
-            if check_nan(theta_t, "theta_t"):
-                raise ValueError("Captured None")
+            # if check_nan(theta_t, "theta_t"):
+            #     raise ValueError("Captured None")
             dtheta_t = self.flow_model.path.velocity(theta_0, theta_1)
-            if check_nan(dtheta_t, "dtheta_t"):
-                raise ValueError("Captured None")
+            # if check_nan(dtheta_t, "dtheta_t"):
+            #     raise ValueError("Captured None")
 
-            mask = (torch.rand(*x.shape[:-1]) > 0.1)
-            x_masked =  x * mask.unsqueeze(-1).expand(*mask.shape, x.shape[-1])
-            v = 0.999 * self.flow_model.velocity_model(t=t, theta=theta_t, x=x_masked) +\
-                0.001 * self.flow_model.velocity_model(t=t, theta=theta_t, x=torch.zeros_like(x)) 
-            if check_nan(v, "v"):
-                raise ValueError("Captured None")
+            if self.cfg_mode:
+                mask = (torch.rand(*x.shape[:-1]) > 0.1)
+                x_masked =  x * mask.unsqueeze(-1).expand(*mask.shape, x.shape[-1])
+                v = 0.999 * self.flow_model.velocity_model(t=t, theta=theta_t, x=x_masked) +\
+                    0.001 * self.flow_model.velocity_model(t=t, theta=theta_t, x=torch.zeros_like(x)) 
+            else:
+                v = self.flow_model.velocity_model(t=t, theta=theta_t, x=x)
+            # if check_nan(v, "v"):
+            #     raise ValueError("Captured None")
             loss = self.loss_fn(v, dtheta_t)
-            if check_nan(loss, "loss"):
-                raise ValueError("Captured None")
+            # if check_nan(loss, "loss"):
+            #     raise ValueError("Captured None")
             loss_stats.append(loss.detach().item())
 
             if loss < min_loss and self.path is not None:
