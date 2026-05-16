@@ -82,37 +82,41 @@ class Proposal(Distribution):
         value: (*batch, d)
         returns: (*batch,)
         """
-
         device = value.device
-        batch_size, d = (value.shape[:-1]), value.shape[-1]
+        batch_shape = value.shape[:-1]
+        d = value.shape[-1]
         
         x_0 = self.params.x_0
         # WARNING: проблемы с размерностями
-        x_0_expanded = x_0.expand(*batch_size, self.params.task.data_dim).to(device)
+        x_0_expanded = x_0.expand(*batch_shape, self.params.task.data_dim).to(device)
             
         # --- initial state (at t = 0) ---
         theta0 = value
 
-        logp = torch.zeros(batch_size, device=device)
+        logp = torch.zeros(batch_shape, device=device)
 
         # Hutchinson noise
         eps = torch.randn_like(theta0)
+
+        # Ensure velocity model is on correct device and in eval mode
+        self.flow_model.velocity_model.eval()
+        self.flow_model.velocity_model.to(device)
 
         # --- ODE function ---
         def ode_func(t, state):
             theta, logp = state
 
-            theta.requires_grad_(True)
-            t_expanded = t.unsqueeze(0).expand(*batch_size, 1)
-            # print(t_expanded.shape, theta.shape, x_0_expanded.shape)
-            u = self.flow_model.velocity_model(t=t_expanded, theta=theta, x=x_0_expanded)
+            with torch.enable_grad():
+                theta = theta.requires_grad_(True)
+                t_expanded = t.unsqueeze(0).expand(*batch_shape, 1)
+                u = self.flow_model.velocity_model(t=t_expanded, theta=theta, x=x_0_expanded)
 
-            jvp = torch.autograd.grad(
-                (u * eps).sum(),
-                theta,
-                create_graph=False,
-                retain_graph=False,
-            )[0]
+                jvp = torch.autograd.grad(
+                    (u * eps).sum(),
+                    theta,
+                    create_graph=False,
+                    retain_graph=False,
+                )[0]
 
             div = (jvp * eps).sum(dim=-1)
 
@@ -122,11 +126,12 @@ class Proposal(Distribution):
             return dtheta, dlogp
 
         # --- integrate BACKWARD: t=1 -> t=0 ---
-        _, logp_correction = odeint(
-            ode_func,
-            y0=(theta0, logp),
-            t=torch.linspace(0, 1, steps=self.params.n_steps)
-        )
+        with torch.no_grad():
+            _, logp_correction = odeint(
+                ode_func,
+                y0=(theta0, logp),
+                t=torch.linspace(0, 1, steps=self.params.n_steps, device=device)
+            )
 
         # --- init dist log prob ---
         if self.params.task is not None:
