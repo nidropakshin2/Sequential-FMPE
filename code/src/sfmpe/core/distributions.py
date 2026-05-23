@@ -36,9 +36,9 @@ class Uniform(Distribution):
 
 
 class Normal(Distribution):
-    def __init__(self, dim=1):
+    def __init__(self, dim=1, device='cpu'):
         self.dim = dim
-        self.dist = torch.distributions.MultivariateNormal(torch.zeros(dim), covariance_matrix=torch.eye(dim))
+        self.dist = torch.distributions.MultivariateNormal(torch.zeros(dim, device=device), covariance_matrix=torch.eye(dim, device=device))
     
     def sample(self, size, **kwargs) -> torch.Tensor:
         return self.dist.sample(size)
