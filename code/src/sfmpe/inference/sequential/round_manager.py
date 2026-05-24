@@ -173,7 +173,7 @@ class RoundManager:
             clean = data[mask]
             if self.proposal_params.method == 'Truncated':
                 try:
-                    logp = self.proposal.log_prob(clean)
+                    logp = self.proposal.log_prob(clean.to(self.device))
                     # self.logger.debug(f"{mask}")
                     mask = (logp <= torch.quantile(logp, self.proposal_params.method_params.get('quantile', None)))
                     clean = clean[mask]
