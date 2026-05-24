@@ -168,8 +168,19 @@ class RoundManager:
             """Отфильтровать и добавить чистые образцы в буфер."""
             if data.numel() == 0:
                 return
+            # mask = self.task.check_support(data)
             mask = self.task.check_support(data)
             clean = data[mask]
+            if self.proposal_params.method == 'Truncated':
+                try:
+                    logp = self.proposal.log_prob(clean)
+                    # self.logger.debug(f"{mask}")
+                    mask = (logp <= torch.quantile(logp, self.proposal_params.method_params.get('quantile', None)))
+                    clean = clean[mask]
+                    # self.logger.debug(f"{data.shape}, {logp.shape}, {mask[0][:5], mask[1][:5]}")
+                except NotImplementedError:
+                    pass
+                
             # self.logger.debug(f"_add_clean data {data.shape}")
             # self.logger.debug(f"_add_clean mask {mask.shape}")
             # self.logger.debug(f"_add_clean clean {clean.shape}")

@@ -75,7 +75,16 @@ class Proposal(Distribution):
     
 
         elif self.params.method == "Truncated":
-            quantile = kwargs.get("quantile", None)
+            x_0 = self.params.x_0
+            x_0_expanded = x_0.unsqueeze(0).expand(*size, *x_0.shape)
+            return self.sampler.sample(x_0=x_0_expanded, 
+                                       n_steps=self.params.n_steps)
+
+
+        elif self.params.method == "shitty-Truncated":
+            # quantile = kwargs.get("quantile", None)
+            assert self.params.method_params is not None
+            quantile = self.params.method_params.get("quantile", None)
             assert quantile is not None
             
             self.buffer = []          # список чистых тензоров (возможно, разной длины)
@@ -86,7 +95,8 @@ class Proposal(Distribution):
                 """Отфильтровать и добавить чистые образцы в буфер."""
                 if data.numel() == 0:
                     return
-                mask = torch.where(data <= torch.quantile(data, quantile))
+                logp = self.log_prob(data)
+                mask = torch.where(logp <= torch.quantile(logp, quantile))
 
                 clean = data[mask]
                 # self.logger.debug(f"_add_clean data {data.shape}")
@@ -121,7 +131,7 @@ class Proposal(Distribution):
                     self.buffer_len = 0
                 return result
             
-            def sample(shape) -> torch.Tensor:
+            def _sample(shape) -> torch.Tensor:
                 """
                 Вернуть тензор чистых образцов формы (*shape, *sample_shape).
 
@@ -171,86 +181,87 @@ class Proposal(Distribution):
                         return torch.tensor([None])
 
                 # Склеиваем все части
-                self.params.task.logger.debug(f"{len(result_parts)}, {result_parts[0].shape}")
+                # self.params.task.logger.debug(f"{len(result_parts)}, {result_parts[0].shape}")
                 flat_result = torch.cat(result_parts, dim=0) if len(result_parts) > 1 else result_parts[0]
                 # Придаём нужную многомерную форму
-                self.params.task.logger.debug(f"flat_result {flat_result}, want shape {(*shape, self.sample_shape)}")
-                self.params.task.logger.debug(f"flat_result return {flat_result.view(*shape, self.sample_shape)}")
+                # self.params.task.logger.debug(f"flat_result {flat_result}, want shape {(*shape, self.sample_shape)}")
+                # self.params.task.logger.debug(f"flat_result return {flat_result.view(*shape, self.sample_shape)}")
 
                 # TODO: плохо, что мы извлекаем нужную нам разменость через raw.shape
                 return flat_result.view(*raw_shape)
             
-            return sample(size)
+            return _sample(size)
 
         else:
             raise NotImplementedError(f"Method {self.params.method} is not implemented") # type: ignore
 
 
     
-def log_prob(posterior, value, **kwargs):
-        """
-        value: (*batch, d)
-        returns: (*batch,)
-        """
-        device = value.device
-        batch_shape = value.shape[:-1]
-        d = value.shape[-1]
-        
-        x_0 = posterior.params.x_0
-        # WARNING: проблемы с размерностями
-        x_0_expanded = x_0.expand(*batch_shape, posterior.params.task.data_dim).to(device)
+    def log_prob(self, value, **kwargs):
+            """
+            value: (*batch, d)
+            returns: (*batch,)
+            """
+            device = value.device
+            batch_shape = value.shape[:-1]
+            d = value.shape[-1]
             
-        # --- initial state (at t = 0) ---
-        theta0 = value
+            x_0 = self.params.x_0
+            # WARNING: проблемы с размерностями
+            x_0_expanded = x_0.expand(*batch_shape, self.params.task.data_dim).to(device)
+                
+            # --- initial state (at t = 0) ---
+            theta0 = value
 
-        logp = torch.zeros(batch_shape, device=device)
+            logp = torch.zeros(batch_shape, device=device)
 
-        # Hutchinson noise
-        eps = torch.randn_like(theta0)
+            # Hutchinson noise
+            eps = torch.randn_like(theta0)
 
-        # Ensure velocity model is on correct device and in eval mode
-        posterior.flow_model.velocity_model.eval()
-        posterior.flow_model.velocity_model.to(device)
+            # Ensure velocity model is on correct device and in eval mode
+            self.flow_model.velocity_model.eval()
+            self.flow_model.velocity_model.to(device)
 
-        # --- ODE function ---
-        def ode_func(t, state):
-            theta, logp = state
+            # --- ODE function ---
+            def ode_func(t, state):
+                theta, logp = state
 
-            with torch.enable_grad():
-                theta = theta.requires_grad_(True)
-                t_expanded = t.unsqueeze(0).expand(*batch_shape, 1)
-                u = posterior.flow_model.velocity_model(t=t_expanded, theta=theta, x=x_0_expanded)
+                with torch.enable_grad():
+                    theta = theta.requires_grad_(True)
+                    t_expanded = t.unsqueeze(0).expand(*batch_shape, 1)
+                    u = self.flow_model.velocity_model(t=t_expanded, theta=theta, x=x_0_expanded)
 
-                jvp = torch.autograd.grad(
-                    (u * eps).sum(),
-                    theta,
-                    create_graph=False,
-                    retain_graph=False,
-                )[0]
+                    jvp = torch.autograd.grad(
+                        (u * eps).sum(),
+                        theta,
+                        create_graph=False,
+                        retain_graph=False,
+                    )[0]
 
-            div = (jvp * eps).sum(dim=-1)
+                div = (jvp * eps).sum(dim=-1)
 
-            dtheta = u
-            dlogp = -div
+                dtheta = u
+                dlogp = -div
 
-            return dtheta, dlogp
+                return dtheta, dlogp
 
-        # --- integrate BACKWARD: t=1 -> t=0 ---
-        with torch.no_grad():
-            _, logp_correction = odeint(
-                ode_func,
-                y0=(theta0, logp),
-                t=torch.linspace(0, 1, steps=8, device=device)
-            )
+            # --- integrate BACKWARD: t=1 -> t=0 ---
+            # WARNING: параметры солвера - константы
+            with torch.no_grad():
+                _, logp_correction = odeint(
+                    ode_func,
+                    y0=(theta0, logp),
+                    t=torch.linspace(0, 1, steps=8, device=device)
+                )
 
-        # --- init dist log prob ---
-        if posterior.params.task is not None:
-            # WARNING могут быть проблемы с устройствами
-            base_logp = posterior.flow_model.init_dist.log_prob(theta0.cpu()).to(device)
-        else:
-            raise NotImplementedError("Base distribution not defined")
+            # --- init dist log prob ---
+            if self.params.task is not None:
+                # WARNING могут быть проблемы с устройствами
+                base_logp = self.flow_model.init_dist.log_prob(theta0.cpu()).to(device)
+            else:
+                raise NotImplementedError("Base distribution not defined")
 
-        # --- итог ---
-        logp = base_logp + logp_correction[-1]
+            # --- итог ---
+            logp = base_logp + logp_correction[-1]
 
-        return logp
+            return logp
