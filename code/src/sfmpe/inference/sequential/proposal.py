@@ -257,7 +257,7 @@ class Proposal(Distribution):
             # --- init dist log prob ---
             if self.params.task is not None:
                 # WARNING могут быть проблемы с устройствами
-                base_logp = self.flow_model.init_dist.log_prob(theta0.cpu()).to(device)
+                base_logp = self.flow_model.init_dist.log_prob(theta0).to(device)
             else:
                 raise NotImplementedError("Base distribution not defined")
 
