@@ -47,8 +47,7 @@ class SIRPrior(Distribution):
         return torch.cat([beta, gamma], dim=-1).to(device)
     
     def log_prob(self, value: torch.Tensor, **kwargs) -> torch.Tensor:
-        # raise NotImplementedError("log_prob() method is not implemented for SIR model")
-        return torch.tensor([-torch.inf])
+        raise NotImplementedError("log_prob() is not implemented for StochVolPrior")
 
 
 class SIRSimulator(Simulator):

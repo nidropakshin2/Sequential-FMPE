@@ -18,7 +18,7 @@ class ProposalParams:
     theta_0: torch.Tensor 
     x_0: None | torch.Tensor 
     # weight: None | float = 0.5
-    n_steps: int = 8
+    n_steps: int = 32
 
 
 
@@ -34,7 +34,8 @@ class Proposal(Distribution):
         if self.params.method == "NPE-A": 
             x_0 = self.params.x_0
             x_0_expanded = x_0.unsqueeze(0).expand(*size, *x_0.shape)
-            return self.sampler.sample(x_0=x_0_expanded, n_steps=self.params.n_steps)
+            return self.sampler.sample(x_0=x_0_expanded, 
+                                       n_steps=self.params.n_steps)
 
         elif self.params.method == 'NPE-B':
             total = 1
@@ -198,70 +199,70 @@ class Proposal(Distribution):
 
     
     def log_prob(self, value, **kwargs):
-            """
-            value: (*batch, d)
-            returns: (*batch,)
-            """
-            device = value.device
-            batch_shape = value.shape[:-1]
-            d = value.shape[-1]
+        """
+        value: (*batch, d)
+        returns: (*batch,)
+        """
+        device = value.device
+        batch_shape = value.shape[:-1]
+        d = value.shape[-1]
+        
+        x_0 = self.params.x_0
+        # WARNING: проблемы с размерностями
+        x_0_expanded = x_0.expand(*batch_shape, self.params.task.data_dim).to(device)
             
-            x_0 = self.params.x_0
-            # WARNING: проблемы с размерностями
-            x_0_expanded = x_0.expand(*batch_shape, self.params.task.data_dim).to(device)
-                
-            # --- initial state (at t = 0) ---
-            theta0 = value
+        # --- initial state (at t = 0) ---
+        theta0 = value
 
-            logp = torch.zeros(batch_shape, device=device)
+        logp = torch.zeros(batch_shape, device=device)
 
-            # Hutchinson noise
-            eps = torch.randn_like(theta0)
+        # Hutchinson noise
+        eps = torch.randn_like(theta0)
 
-            # Ensure velocity model is on correct device and in eval mode
-            self.flow_model.velocity_model.eval()
-            self.flow_model.velocity_model.to(device)
+        # Ensure velocity model is on correct device and in eval mode
+        self.flow_model.velocity_model.eval()
+        self.flow_model.velocity_model.to(device)
 
-            # --- ODE function ---
-            def ode_func(t, state):
-                theta, logp = state
+        # --- ODE function ---
+        def ode_func(t, state):
+            theta, logp = state
 
-                with torch.enable_grad():
-                    theta = theta.requires_grad_(True)
-                    t_expanded = t.unsqueeze(0).expand(*batch_shape, 1)
-                    u = self.flow_model.velocity_model(t=t_expanded, theta=theta, x=x_0_expanded)
+            with torch.enable_grad():
+                theta = theta.requires_grad_(True)
+                t_expanded = t.unsqueeze(0).expand(*batch_shape, 1)
+                u = self.flow_model.velocity_model(t=t_expanded, theta=theta, x=x_0_expanded)
 
-                    jvp = torch.autograd.grad(
-                        (u * eps).sum(),
-                        theta,
-                        create_graph=False,
-                        retain_graph=False,
-                    )[0]
+                jvp = torch.autograd.grad(
+                    (u * eps).sum(),
+                    theta,
+                    create_graph=False,
+                    retain_graph=False,
+                )[0]
 
-                div = (jvp * eps).sum(dim=-1)
+            div = (jvp * eps).sum(dim=-1)
 
-                dtheta = u
-                dlogp = -div
+            dtheta = u
+            dlogp = -div
 
-                return dtheta, dlogp
+            return dtheta, dlogp
 
-            # --- integrate BACKWARD: t=1 -> t=0 ---
-            # WARNING: параметры солвера - константы
-            with torch.no_grad():
-                _, logp_correction = odeint(
-                    ode_func,
-                    y0=(theta0, logp),
-                    t=torch.linspace(0, 1, steps=8, device=device)
-                )
+        # --- integrate BACKWARD: t=1 -> t=0 ---
+        # WARNING: параметры солвера - константы
+        with torch.no_grad():
+            _, logp_correction = odeint(
+                ode_func,
+                y0=(theta0, logp),
+                t=torch.linspace(0, 1, steps=8, device=device)
+            )
 
-            # --- init dist log prob ---
-            if self.params.task is not None:
-                # WARNING могут быть проблемы с устройствами
-                base_logp = self.flow_model.init_dist.log_prob(theta0).to(device)
-            else:
-                raise NotImplementedError("Base distribution not defined")
+        # --- init dist log prob ---
+        if self.params.task is not None:
+            # WARNING могут быть проблемы с устройствами
+            base_logp = self.flow_model.init_dist.log_prob(theta0).to(device)
+        else:
+            raise NotImplementedError("Base distribution not defined")
 
-            # --- итог ---
-            logp = base_logp + logp_correction[-1]
+        # --- итог ---
+        logp = base_logp + logp_correction[-1]
 
-            return logp
+        return logp

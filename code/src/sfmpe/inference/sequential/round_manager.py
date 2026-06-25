@@ -3,6 +3,7 @@ import torch
 from sfmpe.data.simulation_store import SimulationStore
 from sfmpe.data.round_dataset import RoundDataset
 from sfmpe.utils.logger import Logger, get_default_logger
+from sfmpe.utils.plotting import Validator
 
 
 class RoundManager:
@@ -25,7 +26,6 @@ class RoundManager:
         self.estimator = estimator
         self.proposal = task.prior
         self.proposal_params = proposal_params
-        self.validator = validator
         self.device = device
         
         
@@ -37,6 +37,11 @@ class RoundManager:
 
         self.store = SimulationStore(storage_dir)
         self.losses = []
+
+        if validator is not None:
+            self.validator = validator
+        else:
+            self.validator = Validator(self)
         
         # Log initialization
         self.logger.info(f"RoundManager initialized with device: {device}")
@@ -64,7 +69,6 @@ class RoundManager:
         self.logger.debug(f"Sampled {sims_per_round} parameters with shape {theta.shape}")
 
         # simulate data
-        # TODO: сделать очистку от nan
         hasnan = torch.isnan(theta)
         while len(hasnan.shape) > 1:
             hasnan = hasnan.any(dim=-1)
@@ -81,6 +85,7 @@ class RoundManager:
 
         # store simulations
         self.store.add(theta, features, round_id)
+
         self.logger.info(f"Round {round_id} completed - stored {sims_per_round} simulations")
 
     def train_estimator(self, rounds=None, **train_kwargs):
@@ -103,6 +108,7 @@ class RoundManager:
     def build_posterior(self):
         new_x_0 = self.task.simulate(self.proposal_params.theta_0).to(self.device)
         new_x_0 = self.task.summarize(new_x_0).to(self.device)
+        self.logger.debug(f"{self.proposal_params.x_0}, {new_x_0}")
         self.proposal_params.x_0 = new_x_0
         return self.estimator.build_posterior(self.proposal_params)
     
@@ -130,6 +136,7 @@ class RoundManager:
             self.logger.info(f"--- Round {r}/{num_rounds} ---")
 
             out = self.run_round(r, sims_per_round)
+            self.validator.plot_comparison()
             # if r == 1:
             #     self.task.summary.eval() 
             
@@ -141,10 +148,9 @@ class RoundManager:
             # if torch.isnan(torch.tensor(self.losses[-1])):
             #     self.logger.error(f"Loss is nan, stopping execution...")
             #     return -1
+
             posterior = self.build_posterior()
             self.logger.debug(f"Built posterior: {posterior}")
-
-            # self.validator.validate(r, posterior)
 
             self.update_proposal(posterior)
             
@@ -159,6 +165,8 @@ class RoundManager:
     def clean_sample(self, shape):
         if self.task.check_support is None:
             return self.proposal.sample(shape, device=self.device)
+
+        # TODO разобраться с хранением датасетов и вычислением log_prob на GPU
 
         self.buffer = []          # список чистых тензоров (возможно, разной длины)
         self.buffer_len = 0       # общее количество чистых образцов в буфере
@@ -176,8 +184,11 @@ class RoundManager:
                     logp = self.proposal.log_prob(clean.to(self.device))
                     # self.logger.debug(f"{mask}")
                     mask = (logp <= torch.quantile(logp, self.proposal_params.method_params.get('quantile', None)))
+                    # self.logger.debug(f"{data.shape}, {logp.shape}, {mask}")
                     clean = clean[mask]
-                    # self.logger.debug(f"{data.shape}, {logp.shape}, {mask[0][:5], mask[1][:5]}")
+                
+                # если у prior не задана плотность, то мы не запускаем на нем truncated
+                # это в любом случае бесполезно
                 except NotImplementedError:
                     pass
                 

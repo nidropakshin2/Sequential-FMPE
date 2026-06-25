@@ -1,0 +1,113 @@
+\documentclass[a4paper,12pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T2A]{fontenc}
+\usepackage[russian]{babel}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{mathtools}
+
+\newtheorem{theorem}{Теорема}
+\newtheorem{lemma}{Лемма}
+\newtheorem*{problem}{Задача}
+\renewcommand{\proofname}{Решение}
+
+\begin{document}
+
+\begin{problem}[5]
+\end{problem}
+\begin{proof}
+$\implies$ Очевидно: если $f(z)=\sum_{j=0}^\infty x_j(z-z_0)^j$ в смысле сходимости по норме, то для любого $x^*\in X^*$ по непрерывности и линейности функционала
+\[
+x^*(f(z))=\sum_{j=0}^\infty x^*(x_j)(z-z_0)^j
+\]
+--- аналитическая функция, а т.к. $z_0$ произвольно, то $\varphi_{x^*}$ целая $\implies f$ --- слабо аналитична.
+
+$\impliedby$ Докажем в обратную сторону
+
+Зафиксируем $z_0\in\mathbb{C}, \> r>0$, $\gamma$ --- окружность $|\zeta-z_0|=r$. Для $|z-z_0|<r$ определим
+\[
+g(z)=\frac{1}{2\pi i}\int_\gamma \frac{f(\zeta)}{\zeta-z}\,d\zeta
+\]
+Интеграл понимается как интеграл Римана от непрерывной функции $\zeta\mapsto f(\zeta)/(\zeta-z)$ со значениями в $X$. Обоснование почему так можно в конце. 
+Для любого $x^*\in X^*$ в силу непрерывности и линейности
+\[
+x^*(g(z))=\frac{1}{2\pi i}\int_\gamma \frac{x^*(f(\zeta))}{\zeta-z}\,d\zeta
+\]
+Внутренний интеграл --- интегральная формула Коши для $\varphi_{x^*}$, поэтому $x^*(g(z))=\varphi_{x^*}(z)=x^*(f(z))$. 
+Поскольку $X^*$ разделяет точки $X$, то $g(z)=f(z)$ для всех $|z-z_0|<r$. Таким образом,
+\[
+f(z)=\frac{1}{2\pi i}\int_\gamma \frac{f(\zeta)}{\zeta-z}\,d\zeta \qquad (|z-z_0|<r)
+\]
+
+Теперь, раз у нас есть формула Коши, то можно провести аналогичные с классическими рассуждения и получить формулы для коэффициентов.
+Для $|z-z_0|<r$ и $\zeta\in\gamma$ имеем:
+\[
+\frac{1}{\zeta-z}=\frac{1}{\zeta-z_0}\cdot\frac{1}{1-\frac{z-z_0}{\zeta-z_0}}
+= \sum_{j=0}^\infty \frac{(z-z_0)^j}{(\zeta-z_0)^{j+1}}
+\]
+Т.к. $\|f(\zeta)\|\le M$ на $\gamma$, то 
+\[
+\sum_{j=0}^\infty \frac{f(\zeta)(z-z_0)^j}{(\zeta-z_0)^{j+1}}
+\]
+сходится равномерно по $\zeta\in\gamma$ в смысле нормы $X$, тогда
+\[
+f(z)=\frac{1}{2\pi i}\int_\gamma \sum_{j=0}^\infty \frac{f(\zeta)(z-z_0)^j}{(\zeta-z_0)^{j+1}}\,d\zeta
+= \sum_{j=0}^\infty \left(\frac{1}{2\pi i}\int_\gamma \frac{f(\zeta)}{(\zeta-z_0)^{j+1}}\,d\zeta\right) (z-z_0)^j
+\]
+Наконец положим
+\[
+x_j:=\frac{1}{2\pi i}\int_\gamma \frac{f(\zeta)}{(\zeta-z_0)^{j+1}}\,d\zeta \ \in X.
+\]
+Тогда
+\[
+f(z)=\sum_{j=0}^\infty x_j(z-z_0)^j
+\]
+для $|z-z_0|<r$, причём ряд сходится по норме. Поскольку $z_0$ и $r$ произвольны, то мы получаем сильную аналитичность $f$ на $\mathbb{C}$.
+\end{proof}
+
+\paragraph{\textbf{Почему можно интегрировать}}
+
+Зафиксируем произвольный круг $D=\{|z-z_0|\le r\}$. $ \forall x^*\in X^*$ функция $\varphi_{x^*}(z)=x^*(f(z))$ непрерывна, тогда
+$\sup_{z\in D}|\varphi_{x^*}(z)|<\infty$
+
+
+Рассмотрим семейство $\{f(z):z\in D\}\subset X$. Можно представлять, что они действуют на $X^*$ как элементы $X^{**}$ соответствующим образом:
+$f(z)(x^*)=x^*(f(z))$. Т.к. для всякого $x^*$ множество $x^*(f(D))$ ограничено, то семейство $\{f(z)\}$ поточечно ограничено на $X^*$. 
+И поскольку $X^*$ --- банахово, то по принципу равномерной ограниченности оно ограничено по норме в $X^{**}$:
+\[
+\sup_{z\in D}\|f(z)\|_{X^{**}}<\infty
+\]
+Т.к. $X$ полное, то из ограниченности в $X^{**}$ следует ограниченность в $X$:
+\[
+\|f(z)\|_X=\|in(f(z))\|_{X^{**}}\le \sup_{w\in D}\|f(w)\|_{X^{**}}<\infty.
+\]
+где $in: X \to X^{**}$ --- каноническое вложение. Итого, $\exists M>0$, т.ч. $\|f(z)\|\le M, \> \forall z\in D$.
+
+Далее, рассмотрим тот же круг $D$, и $z,w \in D$, т.ч. $|z-z_0|<r/2$, $|w-z_0|<r/2$, тогда $\forall x^*\in X^*$ по формуле Коши имеем:
+\[
+\varphi_{x^*}(z)-\varphi_{x^*}(w)=\frac{1}{2\pi i}\int_\gamma \varphi_{x^*}(\zeta)\left(\frac{1}{\zeta-z}-\frac{1}{\zeta-w}\right)d\zeta
+= \frac{z-w}{2\pi i}\int_\gamma \frac{\varphi_{x^*}(\zeta)}{(\zeta-z)(\zeta-w)}\,d\zeta.
+\]
+Учитывая, что $\varphi_{x^*}(\zeta)=x^*(f(\zeta))$, получаем:
+\[
+x^*(f(z)-f(w))=\frac{z-w}{2\pi i}\int_\gamma \frac{x^*(f(\zeta))}{(\zeta-z)(\zeta-w)}\,d\zeta.
+\]
+Оценим модуль. Для $\zeta\in\gamma$ выполнено $|\zeta-z|\ge r/2$, $|\zeta-w|\ge r/2$ и $\|f(\zeta)\|\le M$. Тогда
+\[
+|x^*(f(z)-f(w))|\le \frac{|z-w|}{2\pi}\cdot 2\pi r\cdot \frac{M\|x^*\|}{(r/2)^2}= \frac{4M}{r}|z-w|\,\|x^*\|.
+\]
+Итого, $\forall \|x^*\|\le 1$ имеем
+\[
+\left| x^*\left(\frac{f(z)-f(w)}{z-w}\right) \right|\le \frac{4M}{r}.
+\]
+Значит, множество $\left\{\frac{f(z)-f(w)}{z-w}:\ |z-z_0|,|w-z_0|<r/2\right\}$ слабо ограничено. Снова по принципу равномерной ограниченности 
+оно ограничено по норме:
+\[
+\|f(z)-f(w)\|\le K|z-w|,
+\]
+где $K=4M/r$. Т.е. $f$ локально липшицева.
+
+После этого вроде как должны нормально работать все рассуждения с суммами Дарбу и проч. Т.е. можно нормально определить интеграл Римана
+
+
+\end{document}
+

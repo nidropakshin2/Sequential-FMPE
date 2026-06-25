@@ -20,12 +20,15 @@ class Distribution(ABC):
         pass
 
 class Uniform(Distribution):
-    def __init__(self, low=0, high=1):
+    def __init__(self, dim=None, low=0, high=1):
         self.low = low
         self.high = high
+        self.dim = dim
         self.dist = torch.distributions.Uniform(low, high) 
 
     def sample(self, size, **kwargs) -> torch.Tensor:
+        if self.dim is not None:
+            size = (*size, self.dim)
         return self.dist.sample(size)
     
     def sample_like(self, tensor: torch.Tensor, **kwargs) -> torch.Tensor:

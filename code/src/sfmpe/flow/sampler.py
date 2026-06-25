@@ -26,7 +26,7 @@ class ODESampler:
     def sample(self, x_0, n_steps=32, **kwargs) -> torch.Tensor:
         # WARNING: возможны проблемы с размерностями
         scale = kwargs.get("scale", 1)
-
+        
         self.flow_model.velocity_model.eval()
         self.flow_model.velocity_model.to(x_0.device)
 
