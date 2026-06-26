@@ -31,6 +31,6 @@ class Validator:
             return NotImplementedError("saving plots is not implemented")
         else:
             self.logger.debug("Plotting comparison...")
-            dist_plot(self.manager.store.theta[-1], 
-                      self.posterior.sample(size[:-1]),
-                      true_param=self.manager.proposal_params.theta_0 if self.manager.proposal_params is not None else None)
+            dist_plot(self.manager.store.theta[-1].cpu(), 
+                      self.posterior.sample(size[:-1]).detach().cpu(),
+                      true_param=self.manager.proposal_params.theta_0.cpu() if self.manager.proposal_params is not None else None)

@@ -63,8 +63,12 @@ class StochVolPrior(Distribution):
 
     def check_support(self, theta: torch.Tensor) -> torch.Tensor:
         
-        clamp_min = torch.tensor([-1, 0.25, 0.05, -5]).to(theta.device)
-        clamp_max = torch.tensor([1, 1, 0.8, 2.5]).to(theta.device)
+        # clamp_min = torch.tensor([-1, 0.25, 0.05, -5]).to(theta.device)
+        # clamp_max = torch.tensor([1, 1, 0.8, 2.5]).to(theta.device)
+
+        clamp_min = torch.tensor([-torch.inf, 0.25, 0.05, -torch.inf]).to(theta.device)
+        clamp_max = torch.tensor([torch.inf, 1, 0.8, torch.inf]).to(theta.device)
+
 
         mask = (clamp_min <= theta) & (theta <= clamp_max)
         while len(mask.shape) > 1:
