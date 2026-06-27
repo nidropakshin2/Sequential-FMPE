@@ -153,6 +153,8 @@ class RoundManager:
             self.logger.debug(f"Built posterior: {posterior}")
 
             self.update_proposal(posterior)
+
+            torch.cuda.empty_cache()
             
             # Log progress
             progress = (r + 1) / num_rounds * 100

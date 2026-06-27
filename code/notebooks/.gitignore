@@ -7,3 +7,4 @@ logs*
 tutorial.ipynb
 bench.ipynb
 stochvol.py
+stochvol_obs.ipynb
