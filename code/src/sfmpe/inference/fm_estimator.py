@@ -71,7 +71,7 @@ class FlowMatchingEstimator:
             t = self.flow_model.path.time_dist.sample((*theta_0.shape[:-1], 1)).to(self.device)
             # if check_nan(t, "t"):
             #     raise ValueError("Captured None")
-            theta_t = self.flow_model.path.sample(theta_0, theta_1, t)
+            theta_t = self.flow_model.path.sample(theta_0, theta_1, t).to(self.device)
             # if check_nan(theta_t, "theta_t"):
             #     raise ValueError("Captured None")
             dtheta_t = self.flow_model.path.velocity(theta_0, theta_1, t)
