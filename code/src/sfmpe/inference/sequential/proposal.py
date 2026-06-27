@@ -73,6 +73,17 @@ class Proposal(Distribution):
             return self.sampler.sample(x_0=x_0_expanded, 
                                        n_steps=self.params.n_steps, 
                                        scale=scale)
+        
+        elif self.params.method == 'correct-fast-Truncated':
+            assert self.params.method_params is not None
+            quantile = self.params.method_params.get("quantile", None)
+            assert quantile is not None
+
+            x_0 = self.params.x_0
+            x_0_expanded = x_0.unsqueeze(0).expand(*size, *x_0.shape)
+            return self.sampler.sample(x_0=x_0_expanded, 
+                                       n_steps=self.params.n_steps, 
+                                       quantile=quantile)
     
 
         elif self.params.method == "Truncated":

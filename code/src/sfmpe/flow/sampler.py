@@ -25,12 +25,12 @@ class ODESampler:
 
     def sample(self, x_0, n_steps=32, **kwargs) -> torch.Tensor:
         # WARNING: возможны проблемы с размерностями
-        scale = kwargs.get("scale", 1)
+        quantile = kwargs.get("quantile", None)
         
         self.flow_model.velocity_model.eval()
         self.flow_model.velocity_model.to(x_0.device)
-
-        theta_0 = scale * self.flow_model.init_dist.sample((*x_0.shape[:-1],)).to(x_0.device)
+        
+        theta_0 = self.flow_model.init_dist.sample((*x_0.shape[:-1],), quantile).to(x_0.device)
 
         t = torch.linspace(0, 1, steps=n_steps + 1).to(x_0.device)
         
