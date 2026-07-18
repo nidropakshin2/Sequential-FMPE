@@ -59,10 +59,10 @@ class RoundManager:
 
         if self.proposal == self.task.prior:
             # theta = self.proposal.sample((sims_per_round, *self.proposal_params.x_0.shape[:-1]), device=self.device)
-            theta = self.clean_sample((sims_per_round, *self.proposal_params.x_0.shape[:-1]), clean_sampling).to(self.device)
+            theta = self.clean_sample((sims_per_round, *self.proposal_params.x_0.shape[:-1]), clean_sampling=clean_sampling).to(self.device)
         else:
             # theta = self.proposal.sample((sims_per_round, ), device=self.device)
-            theta = self.clean_sample((sims_per_round, ), clean_sampling).to(self.device)
+            theta = self.clean_sample((sims_per_round, ), clean_sampling=clean_sampling).to(self.device)
 
         self.logger.debug(f"x_0 shape {self.proposal_params.x_0.shape[:-1]}")
         
