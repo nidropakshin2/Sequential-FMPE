@@ -105,11 +105,12 @@ class RoundManager:
         self.logger.info(f"Estimator training completed")
         return loss_stats
     
-    def build_posterior(self):
-        # new_x_0 = self.task.simulate(self.proposal_params.theta_0).to(self.device)
-        # new_x_0 = self.task.summarize(new_x_0).to(self.device)
-        # self.logger.debug(f"{self.proposal_params.x_0}, {new_x_0}")
-        # self.proposal_params.x_0 = new_x_0
+    def build_posterior(self, update_x=True):
+        if update_x:
+            new_x_0 = self.task.simulate(self.proposal_params.theta_0).to(self.device)
+            new_x_0 = self.task.summarize(new_x_0).to(self.device)
+            self.logger.debug(f"{self.proposal_params.x_0}, {new_x_0}")
+            self.proposal_params.x_0 = new_x_0
         return self.estimator.build_posterior(self.proposal_params)
     
     def update_proposal(self, posterior):
@@ -149,8 +150,11 @@ class RoundManager:
             # if torch.isnan(torch.tensor(self.losses[-1])):
             #     self.logger.error(f"Loss is nan, stopping execution...")
             #     return -1
-
-            posterior = self.build_posterior()
+            if r == 0:
+                update_x = True
+            else:
+                update_x = False
+            posterior = self.build_posterior(update_x=update_x)
             self.logger.debug(f"Built posterior: {posterior}")
 
             self.update_proposal(posterior)
