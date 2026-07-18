@@ -8,31 +8,51 @@ class RoundDataset(Dataset):
     """
 
     def __init__(self, store, rounds=None):
-        """
-        rounds:
-            None - use all rounds
-            list[int] - selected rounds
-        """
-
         theta, x, round_id = store.get_all()
 
         if rounds is not None:
             mask = torch.zeros_like(round_id, dtype=torch.bool)
             for r in rounds:
                 mask |= round_id == r
-
             theta = theta[mask]
             x = x[mask]
 
         self.theta = theta
         self.x = x
 
+        # кэш для перемешанных копий
+        self._shuffled_theta = None
+        self._shuffled_x = None
+
     def __len__(self):
         return self.theta.shape[0]
 
     def __getitem__(self, idx):
-
         return (self.theta[idx], self.x[idx])
+
+    # WARNING: AI-SLOP
+    def _shuffle(self):
+        """Создаёт общую перестановку и кэширует перемешанные тензоры."""
+        n = self.theta.shape[0]
+        perm = torch.randperm(n)
+        self._shuffled_theta = self.theta[perm]
+        self._shuffled_x = self.x[perm]
+
+    def get_theta(self):
+        """Возвращает случайно перемешанный тензор theta (согласовано с x)."""
+        if self._shuffled_theta is None:
+            self._shuffle()
+        return self._shuffled_theta
+
+    def get_x(self):
+        """Возвращает случайно перемешанный тензор x (согласовано с theta)."""
+        if self._shuffled_x is None:
+            self._shuffle()
+        return self._shuffled_x
+
+    def reshuffle(self):
+        """Принудительно генерирует новую перестановку (опционально)."""
+        self._shuffle()
 
 # import bisect
 # import torch

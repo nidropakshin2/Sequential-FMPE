@@ -111,9 +111,10 @@ class SIRSimulator(Simulator):
 
 
 class HandmadeSummary(Summary):
-    def __init__(self, eps=1e-8):
+    def __init__(self, config, eps=1e-8):
         super().__init__()
         self.eps = eps
+        # self.emb_dim = 5
         self.emb_dim = 5
 
     def forward(self, data):
@@ -144,16 +145,73 @@ class HandmadeSummary(Summary):
 
         
         s = torch.cat([t_peak, I_peak_frac, I_mean_frac, R_final_frac, S_final_frac], dim=-1).to(data.device)
+        # s = torch.cat([I_peak_frac, I_mean_frac, R_final_frac, S_final_frac], dim=-1).to(data.device)
         
         B = torch.tensor([[-0.6543, -1.0543,  0.4823, -0.4612,  0.7340],
                           [ 2.6280, -1.6988, -0.6246, -0.0949, -0.3497],
                           [ 0.4116, -0.8507, -0.1116, -0.5067,  1.4959],
                           [-0.2124, -0.1211, -0.8651, -1.2937,  1.2938],
                           [ 0.0257, -0.9242, -1.4133,  0.3826, -1.0719]]).to(data.device)
-        
+        # B = torch.tensor([[ -1.6988, -0.6246, -0.0949, -0.3497],
+        #                   [ -0.8507, -0.1116, -0.5067,  1.4959],
+        #                   [ -0.1211, -0.8651, -1.2937,  1.2938],
+        #                   [ -0.9242, -1.4133,  0.3826, -1.0719]]).to(data.device)
         s = torch.matmul(s, B)
         
         return s
+    
+
+import torch.nn as nn
+
+
+class LSTMSummary(Summary):
+    def __init__(self, config: dict):
+        super().__init__()
+        self.input_dim = config.get("input_dim", 1)
+        self.hidden_dim = config.get("hidden_dim", 32)
+        self.num_layers = config.get("num_layers", 2)
+        self.output_dim = config.get("output_dim", 5)
+        self.dropout = config.get("dropout", 0.1)
+        self.emb_dim = self.output_dim
+
+        self.lstm = nn.LSTM(
+            input_size=self.input_dim,
+            hidden_size=self.hidden_dim,
+            num_layers=self.num_layers,
+            batch_first=True,
+            dropout=self.dropout if self.num_layers > 1 else 0.0,
+        )
+
+        self.fc = nn.Sequential(
+            nn.Linear(self.hidden_dim, self.hidden_dim),
+            nn.ReLU(),
+            nn.Dropout(self.dropout),
+            nn.Linear(self.hidden_dim, self.output_dim),
+        )
+
+    def forward(self, data: torch.Tensor) -> torch.Tensor:
+        """Forward pass through LSTM summary network.
+
+        Args:
+            data: Input time series, shape (batch, T) or (batch, T, input_dim)
+
+        Returns:
+            Summary embeddings, shape (batch, output_dim)
+        """
+        original_shape = data.shape
+        batch_dims = original_shape[:-2]
+        T = original_shape[-2]
+        input_dim = original_shape[-1]
+
+        flat_data = data.view(-1, T, input_dim)   # (total_batch, T, input_dim)
+
+        lstm_out, (h_n, _) = self.lstm(flat_data)   # lstm_out: (total_batch, T, hidden_dim)
+        last_hidden = h_n[-1]   # (total_batch, hidden_dim)
+        summary_flat = self.fc(last_hidden)   # (total_batch, output_dim)
+        summary = summary_flat.view(*batch_dims, self.output_dim)
+
+        return summary
+
 
 
 class SIRTask(Task):
@@ -165,6 +223,7 @@ class SIRTask(Task):
         self.logger_config = config.get("logger")
         super().__init__(device=device)
 
+        self.summary.to(self.device)
         def check_support(theta):
             # clamp_min = torch.log(torch.tensor([sir_task.prior.beta_range[0] + sir_task.prior.gamma_range[0], sir_task.prior.gamma_range[0]]))
             # clamp_max = torch.tensor([sir_task.prior.beta_range[1], sir_task.prior.gamma_range[1]])
@@ -188,8 +247,11 @@ class SIRTask(Task):
         return SIRSimulator(self.simulator_parameters, device=self.device)
 
     def build_summary(self):
-        if self.summary_parameters == "handmade":
-            return HandmadeSummary()
+        summary_type = self.summary_parameters.get("type", "handmade")
+        if summary_type == "handmade":
+            return HandmadeSummary(self.summary_parameters)
+        elif summary_type == "lstm":
+            return LSTMSummary(self.summary_parameters)
         else:
             raise NotImplementedError(f"Summary {self.summary_parameters} is not implemented")
     

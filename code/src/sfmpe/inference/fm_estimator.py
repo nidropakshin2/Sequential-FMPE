@@ -59,7 +59,7 @@ class FlowMatchingEstimator:
 
         for epoch in range(self.epochs + 1):
             
-            theta_1, x = dataset.theta, dataset.x
+            theta_1, x = self.dataset_prepocessor(dataset.theta, dataset.x)
             # if check_nan(theta_1, "dataset theta_1"):
             #     raise ValueError("Captured None")
             # if check_nan(x, "dataset x"):

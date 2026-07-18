@@ -6,7 +6,7 @@ class SimulationStore:
     Storage for all simulations across sequential rounds
     """
 
-    def __init__(self, df_path):
+    def __init__(self, df_path=None):
         # self.df = pd.DataFrame(columns=["theta", "x", "round_id"])
         # self.df_path = df_path
         self.theta = []

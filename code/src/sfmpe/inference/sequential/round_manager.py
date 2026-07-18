@@ -49,7 +49,7 @@ class RoundManager:
         self.logger.info(f"Estimator: {estimator.__class__.__name__}")
 
 
-    def run_round(self, round_id, sims_per_round):
+    def run_round(self, round_id, sims_per_round, clean_sampling):
 
         # Log round start
         self.logger.info(f"Starting round {round_id} with {sims_per_round} simulations")
@@ -59,10 +59,10 @@ class RoundManager:
 
         if self.proposal == self.task.prior:
             # theta = self.proposal.sample((sims_per_round, *self.proposal_params.x_0.shape[:-1]), device=self.device)
-            theta = self.clean_sample((sims_per_round, *self.proposal_params.x_0.shape[:-1])).to(self.device)
+            theta = self.clean_sample((sims_per_round, *self.proposal_params.x_0.shape[:-1]), clean_sampling).to(self.device)
         else:
             # theta = self.proposal.sample((sims_per_round, ), device=self.device)
-            theta = self.clean_sample((sims_per_round, )).to(self.device)
+            theta = self.clean_sample((sims_per_round, ), clean_sampling).to(self.device)
 
         self.logger.debug(f"x_0 shape {self.proposal_params.x_0.shape[:-1]}")
         
@@ -106,10 +106,10 @@ class RoundManager:
         return loss_stats
     
     def build_posterior(self):
-        new_x_0 = self.task.simulate(self.proposal_params.theta_0).to(self.device)
-        new_x_0 = self.task.summarize(new_x_0).to(self.device)
-        self.logger.debug(f"{self.proposal_params.x_0}, {new_x_0}")
-        self.proposal_params.x_0 = new_x_0
+        # new_x_0 = self.task.simulate(self.proposal_params.theta_0).to(self.device)
+        # new_x_0 = self.task.summarize(new_x_0).to(self.device)
+        # self.logger.debug(f"{self.proposal_params.x_0}, {new_x_0}")
+        # self.proposal_params.x_0 = new_x_0
         return self.estimator.build_posterior(self.proposal_params)
     
     def update_proposal(self, posterior):
@@ -124,6 +124,7 @@ class RoundManager:
         self,
         num_rounds,
         sims_per_round,
+        clean_sampling=False,
         **train_kwargs,
     ):
         
@@ -135,8 +136,8 @@ class RoundManager:
 
             self.logger.info(f"--- Round {r}/{num_rounds} ---")
 
-            out = self.run_round(r, sims_per_round)
-            self.validator.plot_comparison()
+            out = self.run_round(r, sims_per_round, clean_sampling)
+            # self.validator.plot_comparison()
             # if r == 1:
             #     self.task.summary.eval() 
             
@@ -164,8 +165,8 @@ class RoundManager:
         self.logger.info(f"Total simulations: {num_rounds * sims_per_round}")
 
 
-    def clean_sample(self, shape):
-        if self.task.check_support is None:
+    def clean_sample(self, shape, **kwargs):
+        if self.task.check_support is None or kwargs.get("clean_sampling", False):
             return self.proposal.sample(shape, device=self.device)
 
         # TODO разобраться с хранением датасетов и вычислением log_prob на GPU
