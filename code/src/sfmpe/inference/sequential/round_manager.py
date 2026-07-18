@@ -126,6 +126,7 @@ class RoundManager:
         num_rounds,
         sims_per_round,
         clean_sampling=False,
+        upd_x=False,
         **train_kwargs,
     ):
         
@@ -150,7 +151,7 @@ class RoundManager:
             # if torch.isnan(torch.tensor(self.losses[-1])):
             #     self.logger.error(f"Loss is nan, stopping execution...")
             #     return -1
-            if r == 0:
+            if r == 0 and upd_x:
                 update_x = True
             else:
                 update_x = False
