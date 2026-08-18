@@ -74,6 +74,7 @@ class Proposal(Distribution):
                                        n_steps=self.params.n_steps, 
                                        scale=scale)
         
+        # WARNING: пока что не реализовано взятие квантиля
         elif self.params.method == 'correct-fast-Truncated':
             assert self.params.method_params is not None
             quantile = self.params.method_params.get("quantile", None)

@@ -21,7 +21,7 @@ class SimpleVelocityField(nn.Module):
         inp = torch.cat([t, x, theta], dim=-1)
         return self.net(inp)
     
-    
+
     def step(self, theta, x, t_start, t_end):
         t_start = t_start.expand(*theta.shape[:-1], 1)
         t_end = t_end.expand(*theta.shape[:-1], 1)
@@ -29,5 +29,6 @@ class SimpleVelocityField(nn.Module):
         
         t_mid = (t_end + t_start) / 2
         theta_mid = theta + self.forward(t=t_start, theta=theta, x=x) * (t_mid - t_start)
-        return theta + self.forward(t=t_mid, theta=theta_mid, x=x) * (t_end - t_mid)
+        # return theta + self.forward(t=t_mid, theta=theta_mid, x=x) * (t_end - t_mid)
+        return theta + self.forward(t=t_mid, theta=theta_mid, x=x) * (t_end - t_start)
 

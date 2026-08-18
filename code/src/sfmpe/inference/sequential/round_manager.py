@@ -160,7 +160,7 @@ class RoundManager:
 
             self.update_proposal(posterior)
 
-            torch.cuda.empty_cache()
+            # torch.cuda.empty_cache()
             
             # Log progress
             progress = (r + 1) / num_rounds * 100
@@ -171,7 +171,7 @@ class RoundManager:
 
 
     def clean_sample(self, shape, **kwargs):
-        if self.task.check_support is None or kwargs.get("clean_sampling", False):
+        if self.task.check_support is None or not kwargs.get("clean_sampling", False):
             return self.proposal.sample(shape, device=self.device)
 
         # TODO разобраться с хранением датасетов и вычислением log_prob на GPU
