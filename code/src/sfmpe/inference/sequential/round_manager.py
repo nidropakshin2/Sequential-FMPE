@@ -100,7 +100,8 @@ class RoundManager:
         self.logger.info(f"Training parameters: epochs={epochs}")
         
         # Train the estimator
-        loss_stats = self.estimator.train(dataset, **train_kwargs)
+        # loss_stats = self.estimator.train(dataset, **train_kwargs)
+        loss_stats = self.estimator.train_experimental(dataset, **train_kwargs)
         
         self.logger.info(f"Estimator training completed")
         return loss_stats
@@ -191,7 +192,7 @@ class RoundManager:
                 try:
                     logp = self.proposal.log_prob(clean.to(self.device))
                     # self.logger.debug(f"{mask}")
-                    mask = (logp <= torch.quantile(logp, self.proposal_params.method_params.get('quantile', None)))
+                    mask = (logp >= torch.quantile(logp, self.proposal_params.method_params.get('quantile', None)))
                     # self.logger.debug(f"{data.shape}, {logp.shape}, {mask}")
                     clean = clean[mask]
                 
@@ -290,7 +291,7 @@ class RoundManager:
             # Придаём нужную многомерную форму
             # self.logger.debug(f"flat_result {flat_result}, want shape {(*shape, self.sample_shape)}")
             # self.logger.debug(f"flat_result return {flat_result.view(*shape, self.sample_shape)}")
-
+            self.logger.debug(f"shape bug {shape, raw_shape, flat_result.size()}")
             # TODO: плохо, что мы извлекаем нужную нам разменость через raw.shape
             return flat_result.view(*raw_shape)
         
