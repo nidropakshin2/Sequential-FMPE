@@ -48,6 +48,49 @@ class RoundManager:
         self.logger.info(f"Task: {task.__class__.__name__}")
         self.logger.info(f"Estimator: {estimator.__class__.__name__}")
 
+    def run_round_experimental(self, round_id, samples_per_round, sims_per_sample, clean_sampling):
+    
+            # Log round start
+            self.logger.info(f"Starting round {round_id} with {samples_per_round} simulations")
+            
+            # sample parameters
+            self.logger.debug(f"Proposal distribution: {self.proposal}")
+    
+            if self.proposal == self.task.prior:
+                # theta = self.proposal.sample((sims_per_round, *self.proposal_params.x_0.shape[:-1]), device=self.device)
+                theta = self.clean_sample((samples_per_round, *self.proposal_params.x_0.shape[:-1]), clean_sampling=clean_sampling).to(self.device)
+            else:
+                # theta = self.proposal.sample((sims_per_round, ), device=self.device)
+                theta = self.clean_sample((samples_per_round, ), clean_sampling=clean_sampling).to(self.device)
+    
+            self.logger.debug(f"x_0 shape {self.proposal_params.x_0.shape[:-1]}")
+            
+            self.logger.debug(f"Sampled {samples_per_round} parameters with shape {theta.shape}")
+    
+            # simulate data
+            hasnan = torch.isnan(theta)
+            while len(hasnan.shape) > 1:
+                hasnan = hasnan.any(dim=-1)
+            if hasnan.any():
+                self.logger.info(f"Stopping round {round_id} because theta has nan")
+                return -1
+
+            """
+            theta: [N, K, theta_dim] -> [N*sims_per_sample, K, theta_dim]
+            """
+            theta = theta.unsqueeze(0).expand(sims_per_sample, *theta.shape).flatten(0, 1)
+            x = self.task.simulator.simulate(theta).to(self.device)
+            self.logger.debug(f"Simulated data with shape: {x.shape}")
+    
+            # summary statistics
+            self.task.summary.to(self.device)
+            features = self.task.summary(x).to(self.device)
+            self.logger.debug(f"Computed summary statistics with shape: {features.shape}")
+    
+            # store simulations
+            self.store.add(theta, features, round_id)
+    
+            self.logger.info(f"Round {round_id} completed - stored {samples_per_round} simulations")
 
     def run_round(self, round_id, sims_per_round, clean_sampling):
 
@@ -128,6 +171,7 @@ class RoundManager:
         sims_per_round,
         clean_sampling=False,
         upd_x=False,
+        sims_per_sample=10,
         **train_kwargs,
     ):
         
@@ -139,7 +183,8 @@ class RoundManager:
 
             self.logger.info(f"--- Round {r}/{num_rounds} ---")
 
-            out = self.run_round(r, sims_per_round, clean_sampling)
+            # out = self.run_round(r, sims_per_round, clean_sampling)
+            out = self.run_round_experimental(r, sims_per_round, sims_per_sample, clean_sampling)
             # self.validator.plot_comparison()
             # if r == 1:
             #     self.task.summary.eval() 

@@ -28,6 +28,7 @@ class SimulationStore:
         #     print("Theta after reshape", theta.shape, x.shape)
         #     return 0
         
+        # TODO: на GPU не хватает памяти чтоб хранить все это дерьмо
         self.theta.append(theta.detach())
         self.x.append(x.detach())
         self.round_id.append(
