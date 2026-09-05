@@ -61,21 +61,6 @@ class StochVolPrior(Distribution):
 
         return torch.cat([mu, phi, sigma, m], dim=-1)
 
-    def check_support(self, theta: torch.Tensor) -> torch.Tensor:
-        
-        # clamp_min = torch.tensor([-1, 0.25, 0.05, -5]).to(theta.device)
-        # clamp_max = torch.tensor([1, 1, 0.8, 2.5]).to(theta.device)
-
-        clamp_min = torch.tensor([-torch.inf, 0.25, 0.05, -torch.inf]).to(theta.device)
-        clamp_max = torch.tensor([torch.inf, 1, 0.8, torch.inf]).to(theta.device)
-
-
-        mask = (clamp_min <= theta) & (theta <= clamp_max)
-        while len(mask.shape) > 1:
-            mask = mask.all(dim=-1)
-
-        return mask
-
     def log_prob(self, value: torch.Tensor, **kwargs):
         raise NotImplementedError("log_prob() is not implemented for StochVolPrior")
 
@@ -203,10 +188,24 @@ class StochVolTask(Task):
         #     while len(mask.shape) > 1:
         #         mask = mask.all(dim=-1)
         #     return mask
-
-        self.check_support = self.prior.check_support
         self.theta_dim = 4
         self.data_dim = self.summary.emb_dim
+
+    def check_support(self, theta: torch.Tensor) -> torch.Tensor:
+        
+        # clamp_min = torch.tensor([-1, 0.25, 0.05, -5]).to(theta.device)
+        # clamp_max = torch.tensor([1, 1, 0.8, 2.5]).to(theta.device)
+
+        clamp_min = torch.tensor([-torch.inf, 0.25, 0.05, -torch.inf]).to(theta.device)
+        clamp_max = torch.tensor([torch.inf, 1, 0.8, torch.inf]).to(theta.device)
+
+
+        mask = (clamp_min <= theta) & (theta <= clamp_max)
+        for _ in range(self.theta_dim):
+            mask = mask.all(dim=-1)
+
+        return mask
+        
 
     def build_prior(self):
         return StochVolPrior(self.prior_parameters)

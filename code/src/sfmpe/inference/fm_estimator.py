@@ -181,11 +181,13 @@ class FlowMatchingEstimator:
             
         return loss_stats
 
-    def load(self):
-        assert os.path.exists(self.path)
+    def load(self, path):
+        assert os.path.exists(path)
         if self.logger:
-            self.logger.info(f"Loading model from {self.path}...")
-        self.flow_model.load_state_dict(torch.load(self.path, weights_only=True, map_location=self.device))
+            self.logger.info(f"Loading model from {path}...")
+        # WARNING: понять откуда брать device
+        self.device = 'cpu'
+        self.flow_model.load_state_dict(torch.load(path, weights_only=True, map_location=self.device))
         
         return self.flow_model
 

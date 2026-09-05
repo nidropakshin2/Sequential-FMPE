@@ -224,21 +224,21 @@ class SIRTask(Task):
         super().__init__(device=device)
 
         self.summary.to(self.device)
-        def check_support(theta):
-            # clamp_min = torch.log(torch.tensor([sir_task.prior.beta_range[0] + sir_task.prior.gamma_range[0], sir_task.prior.gamma_range[0]]))
-            # clamp_max = torch.tensor([sir_task.prior.beta_range[1], sir_task.prior.gamma_range[1]])
-            clamp_min = torch.tensor([0.025, 0.05]).to(theta.device)
-            clamp_max = torch.tensor([2.5, 0.5]).to(theta.device)
-            mask = (theta >= clamp_min) & (theta <= clamp_max)
-            while len(mask.shape) > 1:
-                mask = mask.all(dim=-1)
-            return  mask
 
-        self.check_support = check_support
-        
         self.theta_dim = 2
         self.data_dim = self.summary.emb_dim
     
+    def check_support(self, theta):
+        # clamp_min = torch.log(torch.tensor([sir_task.prior.beta_range[0] + sir_task.prior.gamma_range[0], sir_task.prior.gamma_range[0]]))
+        # clamp_max = torch.tensor([sir_task.prior.beta_range[1], sir_task.prior.gamma_range[1]])
+        clamp_min = torch.tensor([0.025, 0.05]).to(theta.device)
+        clamp_max = torch.tensor([2.5, 0.5]).to(theta.device)
+        mask = (theta >= clamp_min) & (theta <= clamp_max)
+        for _ in range(self.theta_dim):
+            mask = mask.all(dim=-1)
+        return mask
+
+
     def build_prior(self):
         return SIRPrior(gamma_range=self.prior_paramters["gamma_range"],
                         beta_range=self.prior_paramters["beta_range"])

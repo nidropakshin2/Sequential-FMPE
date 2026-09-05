@@ -2,26 +2,28 @@ import matplotlib.pyplot as plt
 
 
 def dist_plot(*dists, true_param=None, pred_param=None):
-        # assert len(dist1.shape) == len(dist2.shape) and dist1.shape[-1] == dist2.shape[-1]
-        theta_dim = dists[0].shape[-1]
-        num_bins  = [int(dists[i].shape[0] ** 0.5) for i in range(len(dists))]
-        
-        _, ax = plt.subplots(len(dists), theta_dim, sharex='col', figsize=(3*theta_dim, 3*len(dists)))
-        if len(dists) == 1:
-            ax = [ax]
-        for j in range(theta_dim):
-            for thetas, i in zip(dists, range(len(dists))):
-                counts, bins, patches = ax[i][j].hist(thetas[:, :, j], bins=num_bins[i], alpha=0.5, density=True)
+    # assert len(dist1.shape) == len(dist2.shape) and dist1.shape[-1] == dist2.shape[-1]
+    theta_dim = dists[0].shape[-1]
+    K = dists[0].shape[-2]
+    num_bins  = [int(dists[i].shape[0] ** 0.5) for i in range(len(dists))]
+    
+    _, ax = plt.subplots(len(dists), theta_dim, sharex='col', figsize=(3*theta_dim, 3*len(dists)))
+    if len(dists) == 1:
+        ax = [ax]
+    for j in range(theta_dim):
+        for thetas, i in zip(dists, range(len(dists))):
+            for k in range(K):
+                counts, bins, patches = ax[i][j].hist(thetas[:, k, j], bins=num_bins[i], alpha=0.5, density=True)
 
                 bin_centers = (bins[:-1] + bins[1:]) / 2
 
                 ax[i][j].plot(bin_centers, counts, 'b-', linewidth=1)
 
                 if true_param is not None:
-                    ax[i][j].axvline(x=true_param[:, j], linestyle='--', color='green')
+                    ax[i][j].axvline(x=true_param[k, j], linestyle='--', color='green')
                 
                 if pred_param is not None:
-                    ax[i][j].axvline(x=pred_param[:, j], linestyle='--', color='red')
+                    ax[i][j].axvline(x=pred_param[k, j], linestyle='--', color='red')
 
 
 class Validator:
