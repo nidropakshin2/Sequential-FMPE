@@ -362,7 +362,7 @@ class RoundManager:
         
         return sample(shape)
 
-    # TODO: сделать сначала 
+
     def clean_sample_experimental(self, shape, **kwargs):
         if not kwargs.get("clean_sampling", False):
             self.logger.debug("NO clean sampling")
@@ -416,27 +416,6 @@ class RoundManager:
             if data.numel() == 0:
                 return None
             
-            # data_clone[~mask1] = -torch.inf
-            if self.proposal_params.method == 'Truncated':
-                try:
-                    # logp = self.proposal.log_prob(data[mask1].to(self.device))
-                    logp = self.proposal.log_prob(data.to(self.device))
-                    # self.logger.debug(f"{mask}")
-                    mask2 = (logp >= torch.quantile(logp, self.proposal_params.method_params.get('quantile', None)))
-                    # self.logger.debug(f"{data.shape}, {logp.shape}, {mask}")
-                    # mask = mask1.clone()
-                    # mask[mask1] = mask2
-                    # mask1 = mask1 & mask2
-                
-                # если у prior не задана плотность, то мы не запускаем на нем truncated
-                # это в любом случае бесполезно
-                except NotImplementedError:
-                    pass
-            else:
-                mask2 = torch.ones_like(data, dtype=torch.bool)
-                mask2 = mask2.all(dim=-1)
-
-            
             if self.task.check_support is None:
                 mask1 = torch.ones_like(data, dtype=torch.bool)
                 mask1 = mask1.all(dim=-1)
@@ -445,7 +424,23 @@ class RoundManager:
             self.logger.debug(f"mask1.dtype = {mask1.dtype}, check support is None: {self.task.check_support is None}")
             self.logger.debug(f"data {data.shape}, mask1: {mask1.shape}")
 
-            mask1 = mask1 & mask2
+            # data_clone = data.clone()
+            # data_clone[~mask1] = -torch.inf
+            if self.proposal_params.method == 'Truncated':
+                try:
+                    logp = self.proposal.log_prob(data[mask1].to(self.device))
+                    # logp = self.proposal.log_prob(data_clone.to(self.device))
+                    # self.logger.debug(f"{mask}")
+                    mask2 = (logp >= torch.quantile(logp, self.proposal_params.method_params.get('quantile', None)))
+                    # self.logger.debug(f"{data.shape}, {logp.shape}, {mask}")
+                    mask = mask1.clone()
+                    mask[mask1] = mask2
+                    # mask1 = mask1 & mask2
+                    return mask
+                # если у prior не задана плотность, то мы не запускаем на нем truncated
+                # это в любом случае бесполезно
+                except NotImplementedError:
+                    return mask1
             return mask1
         
         self.logger.debug("hello1")
