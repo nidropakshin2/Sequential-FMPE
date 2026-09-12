@@ -26,6 +26,7 @@ class RoundManager:
         self.estimator = estimator
         self.proposal = task.prior
         self.proposal_params = proposal_params
+        self.K = self.proposal_params.theta_0.shape[-2]
         self.device = device
         
         
@@ -65,13 +66,15 @@ class RoundManager:
             self.logger.debug(f"Proposal distribution: {self.proposal}")
     
             if self.proposal == self.task.prior:
-                # theta = self.proposal.sample((sims_per_round, *self.proposal_params.x_0.shape[:-1]), device=self.device)
+                theta = self.proposal.sample((samples_per_round, self.K), device=self.device)
                 # theta = self.clean_sample((samples_per_round, *self.proposal_params.x_0.shape[:-1]), clean_sampling=clean_sampling).to(self.device)
-                theta = self.clean_sample_experimental((samples_per_round, *self.proposal_params.x_0.shape[:-1]), clean_sampling=clean_sampling).to(self.device)
+                # theta = self.clean_sample_experimental((samples_per_round, self.K), clean_sampling=clean_sampling).to(self.device)
+                self.logger.debug("first round")
             else:
                 # theta = self.proposal.sample((sims_per_round, ), device=self.device)
                 # theta = self.clean_sample((samples_per_round, ), clean_sampling=clean_sampling).to(self.device)
                 theta = self.clean_sample_experimental((samples_per_round, ), clean_sampling=clean_sampling).to(self.device)
+                self.logger.debug("second and further round")
                 
     
             self.logger.debug(f"x_0 shape {self.proposal_params.x_0.shape[:-1]}")
@@ -195,7 +198,7 @@ class RoundManager:
             self.logger.info(f"--- Round {r}/{num_rounds} ---")
 
             # out = self.run_round(r, sims_per_round, clean_sampling)
-            out = self.run_round_experimental(r, sims_per_round, sims_per_sample, clean_sampling)
+            out = self.run_round_experimental(r, sims_per_round, sims_per_sample, clean_sampling=clean_sampling)
             # self.validator.plot_comparison()
             # if r == 1:
             #     self.task.summary.eval() 
@@ -228,8 +231,10 @@ class RoundManager:
 
 
     def clean_sample(self, shape, **kwargs):
-        if self.task.check_support is None or not kwargs.get("clean_sampling", False):
+        if not kwargs.get("clean_sampling", False):
+            self.logger.debug("NO clean sampling")
             return self.proposal.sample(shape, device=self.device)
+
 
         # TODO разобраться с хранением датасетов и вычислением log_prob на GPU
 
@@ -241,8 +246,12 @@ class RoundManager:
             """Отфильтровать и добавить чистые образцы в буфер."""
             if data.numel() == 0:
                 return
-            # mask = self.task.check_support(data)
-            mask = self.task.check_support(data)
+            if self.task.check_support is None:
+                mask = torch.ones_like(data)
+                mask.all(dim=-1)
+            else:
+                mask = self.task.check_support(data)
+
             clean = data[mask]
             if self.proposal_params.method == 'Truncated':
                 try:
@@ -353,9 +362,10 @@ class RoundManager:
         
         return sample(shape)
 
-
+    # TODO: сделать сначала 
     def clean_sample_experimental(self, shape, **kwargs):
-        if self.task.check_support is None or not kwargs.get("clean_sampling", False):
+        if not kwargs.get("clean_sampling", False):
+            self.logger.debug("NO clean sampling")
             return self.proposal.sample(shape, device=self.device)
 
         """
@@ -368,15 +378,12 @@ class RoundManager:
             True означает, что позиция еще не заполнена
 
         """
-        self.buffer = torch.zeros(*shape, device=self.device)
-        self.remaining = torch.ones(*shape[:-1], dtype=torch.bool, device=self.device)
-
         self.sample_shape = self.task.theta_dim
+        
+        self.buffer = torch.zeros(*shape, self.K, self.sample_shape, device=self.device)
+        self.remaining = torch.ones(*shape, self.K, dtype=torch.bool, device=self.device)
 
-        def _merge_samples(
-            new_samples,
-            valid_mask
-        ):
+        def _merge_samples(new_samples, valid_mask):
             """
             Заполняет еще пустые позиции в buffer.
 
@@ -395,7 +402,7 @@ class RoundManager:
                     True означает, что позиция все еще не заполнена.
             """
             fill_mask = self.remaining & valid_mask
-            self.logger.debug(f"shapes self.remaining {self.remaining.shape}, valid_mask {valid_mask.shape}, fill_mask {fill_mask}")
+            # self.logger.debug(f"shapes self.remaining {self.remaining.shape}, valid_mask {valid_mask.shape}, fill_mask {fill_mask}")
             # mask -> [N, K, 1], broadcasting по theta_dim
             # fill_mask = fill_mask.unsqueeze(-1)
             
@@ -405,29 +412,57 @@ class RoundManager:
 
             return new_remaining
 
-        def _mask(data: torch.Tensor) -> None:
+        def _mask(data: torch.Tensor) -> torch.Tensor | None:
             if data.numel() == 0:
-                return
-            mask1 = self.task.check_support(data)
+                return None
+            
+            # data_clone[~mask1] = -torch.inf
             if self.proposal_params.method == 'Truncated':
                 try:
-                    logp = self.proposal.log_prob(data[mask1].to(self.device))
+                    # logp = self.proposal.log_prob(data[mask1].to(self.device))
+                    logp = self.proposal.log_prob(data.to(self.device))
                     # self.logger.debug(f"{mask}")
                     mask2 = (logp >= torch.quantile(logp, self.proposal_params.method_params.get('quantile', None)))
                     # self.logger.debug(f"{data.shape}, {logp.shape}, {mask}")
-                    mask1[mask1] = mask2
+                    # mask = mask1.clone()
+                    # mask[mask1] = mask2
+                    # mask1 = mask1 & mask2
                 
                 # если у prior не задана плотность, то мы не запускаем на нем truncated
                 # это в любом случае бесполезно
                 except NotImplementedError:
                     pass
-            return mask1
+            else:
+                mask2 = torch.ones_like(data, dtype=torch.bool)
+                mask2 = mask2.all(dim=-1)
 
+            
+            if self.task.check_support is None:
+                mask1 = torch.ones_like(data, dtype=torch.bool)
+                mask1 = mask1.all(dim=-1)
+            else:
+                mask1 = self.task.check_support(data)
+            self.logger.debug(f"mask1.dtype = {mask1.dtype}, check support is None: {self.task.check_support is None}")
+            self.logger.debug(f"data {data.shape}, mask1: {mask1.shape}")
+
+            mask1 = mask1 & mask2
+            return mask1
+        
+        self.logger.debug("hello1")
         while self.remaining.any():
 
             samples = self.proposal.sample(shape, device=self.device)
 
             valid_mask = _mask(samples)
+
+            self.logger.debug(f"shapes self.remaining {self.remaining.shape}, valid_mask {valid_mask.shape}")
+                        
+            accepted = valid_mask & self.remaining
+            self.logger.debug("hello2")
+            self.logger.debug(
+                f"remaining: {self.remaining.sum().item()}, "
+                f"accepted: {accepted.sum().item()}"
+            )
 
             self.remaining = _merge_samples(samples, valid_mask)
 

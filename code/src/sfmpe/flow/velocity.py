@@ -15,6 +15,7 @@ class SimpleVelocityField(nn.Module):
 
 
     def forward(self, t, theta, x):
+        
         if t.dim() == 1:
             t = t.unsqueeze(-1)
         inp = torch.cat([t, x, theta], dim=-1)

@@ -201,8 +201,7 @@ class StochVolTask(Task):
 
 
         mask = (clamp_min <= theta) & (theta <= clamp_max)
-        for _ in range(self.theta_dim):
-            mask = mask.all(dim=-1)
+        mask = mask.all(dim=-1)
 
         return mask
         

@@ -234,8 +234,7 @@ class SIRTask(Task):
         clamp_min = torch.tensor([0.025, 0.05]).to(theta.device)
         clamp_max = torch.tensor([2.5, 0.5]).to(theta.device)
         mask = (theta >= clamp_min) & (theta <= clamp_max)
-        for _ in range(self.theta_dim):
-            mask = mask.all(dim=-1)
+        mask = mask.all(dim=-1)
         return mask
 
 

@@ -212,8 +212,8 @@ class Proposal(Distribution):
     
     def log_prob(self, value, **kwargs):
         """
-        value: (*batch, d)
-        returns: (*batch,)
+        value: (*batch, K, d)
+        returns: (*batch, K,)
         """
         device = value.device
         batch_shape = value.shape[:-1]
@@ -221,6 +221,8 @@ class Proposal(Distribution):
         
         x_0 = self.params.x_0
         # WARNING: проблемы с размерностями
+        # x_0_expanded = x_0.unsqueeze(0).expand(*batch_shape, *x_0.shape).to(device)
+        
         x_0_expanded = x_0.expand(*batch_shape, self.params.task.data_dim).to(device)
             
         # --- initial state (at t = 0) ---
@@ -235,6 +237,8 @@ class Proposal(Distribution):
         self.flow_model.velocity_model.eval()
         self.flow_model.velocity_model.to(device)
 
+        self.params.task.logger.debug(f"batch_shape, t_exp, theta, x_0_exp {batch_shape, theta0.shape, x_0_expanded.shape}")
+        
         # --- ODE function ---
         def ode_func(t, state):
             theta, logp = state
