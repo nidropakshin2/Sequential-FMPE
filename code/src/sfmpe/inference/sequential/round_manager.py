@@ -401,16 +401,31 @@ class RoundManager:
                     [N, K]
                     True означает, что позиция все еще не заполнена.
             """
-            fill_mask = self.remaining & valid_mask
-            # self.logger.debug(f"shapes self.remaining {self.remaining.shape}, valid_mask {valid_mask.shape}, fill_mask {fill_mask}")
-            # mask -> [N, K, 1], broadcasting по theta_dim
-            # fill_mask = fill_mask.unsqueeze(-1)
+            # fill_mask = self.remaining & valid_mask
+
             
-            self.buffer[fill_mask] = new_samples[fill_mask]
+            # self.buffer[fill_mask] = new_samples[fill_mask]
 
-            new_remaining = self.remaining & ~valid_mask
+            # new_remaining = self.remaining & ~valid_mask
 
-            return new_remaining
+            # return new_remaining
+            
+            remaining_idx = self.remaining.nonzero(as_tuple=True)[0]
+            valid_idx = valid_mask.nonzero(as_tuple=True)[0]
+
+            n_fill = min(
+                remaining_idx.numel(),
+                valid_idx.numel()
+            )
+
+            if n_fill == 0:
+                return
+
+            remaining_idx = remaining_idx[:n_fill]
+            valid_idx = valid_idx[:n_fill]
+
+            self.buffer[remaining_idx] = new_samples[valid_idx]
+            self.remaining[remaining_idx] = False
 
         def _mask(data: torch.Tensor) -> torch.Tensor | None:
             if data.numel() == 0:
@@ -424,18 +439,13 @@ class RoundManager:
             self.logger.debug(f"mask1.dtype = {mask1.dtype}, check support is None: {self.task.check_support is None}")
             self.logger.debug(f"data {data.shape}, mask1: {mask1.shape}")
 
-            # data_clone = data.clone()
-            # data_clone[~mask1] = -torch.inf
             if self.proposal_params.method == 'Truncated':
                 try:
                     logp = self.proposal.log_prob(data[mask1].to(self.device))
-                    # logp = self.proposal.log_prob(data_clone.to(self.device))
-                    # self.logger.debug(f"{mask}")
+
                     mask2 = (logp >= torch.quantile(logp, self.proposal_params.method_params.get('quantile', None)))
-                    # self.logger.debug(f"{data.shape}, {logp.shape}, {mask}")
                     mask = mask1.clone()
                     mask[mask1] = mask2
-                    # mask1 = mask1 & mask2
                     return mask
                 # если у prior не задана плотность, то мы не запускаем на нем truncated
                 # это в любом случае бесполезно
@@ -443,7 +453,6 @@ class RoundManager:
                     return mask1
             return mask1
         
-        self.logger.debug("hello1")
         while self.remaining.any():
 
             samples = self.proposal.sample(shape, device=self.device)
@@ -452,13 +461,10 @@ class RoundManager:
 
             self.logger.debug(f"shapes self.remaining {self.remaining.shape}, valid_mask {valid_mask.shape}")
                         
-            accepted = valid_mask & self.remaining
-            self.logger.debug("hello2")
             self.logger.debug(
                 f"remaining: {self.remaining.sum().item()}, "
-                f"accepted: {accepted.sum().item()}"
             )
 
-            self.remaining = _merge_samples(samples, valid_mask)
+            _merge_samples(samples, valid_mask)
 
         return self.buffer
