@@ -31,7 +31,7 @@ class Validator:
         self.manager = manager
         self.task = manager.task
         self.logger = manager.logger
-        self.posterior = manager.build_posterior()
+        self.posterior = manager.proposal
     
 
     def plot_comparison(self, size=(10000, 1), path=None):

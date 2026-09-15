@@ -39,10 +39,7 @@ class RoundManager:
         self.store = SimulationStore(storage_dir)
         self.losses = []
 
-        if validator is not None:
-            self.validator = validator
-        else:
-            self.validator = Validator(self)
+        self.validator = validator
         
         # Log initialization
         self.logger.info(f"RoundManager initialized with device: {device}")
@@ -59,71 +56,22 @@ class RoundManager:
 
     def run_round_experimental(self, round_id, samples_per_round, sims_per_sample, clean_sampling):
     
-            # Log round start
-            self.logger.info(f"Starting round {round_id} with {samples_per_round} simulations")
-            
-            # sample parameters
-            self.logger.debug(f"Proposal distribution: {self.proposal}")
-    
-            if self.proposal == self.task.prior:
-                theta = self.proposal.sample((samples_per_round, self.K), device=self.device)
-                # theta = self.clean_sample((samples_per_round, *self.proposal_params.x_0.shape[:-1]), clean_sampling=clean_sampling).to(self.device)
-                # theta = self.clean_sample_experimental((samples_per_round, self.K), clean_sampling=clean_sampling).to(self.device)
-                self.logger.debug("first round")
-            else:
-                # theta = self.proposal.sample((sims_per_round, ), device=self.device)
-                # theta = self.clean_sample((samples_per_round, ), clean_sampling=clean_sampling).to(self.device)
-                theta = self.clean_sample_experimental((samples_per_round, ), clean_sampling=clean_sampling).to(self.device)
-                self.logger.debug("second and further round")
-                
-    
-            self.logger.debug(f"x_0 shape {self.proposal_params.x_0.shape[:-1]}")
-            
-            self.logger.debug(f"Sampled {samples_per_round} parameters with shape {theta.shape}")
-    
-            # simulate data
-            hasnan = torch.isnan(theta)
-            while len(hasnan.shape) > 1:
-                hasnan = hasnan.any(dim=-1)
-            if hasnan.any():
-                self.logger.info(f"Stopping round {round_id} because theta has nan")
-                return -1
-
-            """
-            theta: [N, K, theta_dim] -> [N*sims_per_sample, K, theta_dim]
-            """
-            theta = theta.unsqueeze(0).expand(sims_per_sample, *theta.shape).flatten(0, 1)
-            x = self.task.simulator.simulate(theta).to(self.device)
-            self.logger.debug(f"Simulated data with shape: {x.shape}")
-    
-            # summary statistics
-            self.task.summary.to(self.device)
-            features = self.task.summary(x).to(self.device)
-            self.logger.debug(f"Computed summary statistics with shape: {features.shape}")
-    
-            # store simulations
-            self.store.add(theta, features, round_id)
-    
-            self.logger.info(f"Round {round_id} completed - stored {samples_per_round} simulations")
-
-    def run_round(self, round_id, sims_per_round, clean_sampling):
-
         # Log round start
-        self.logger.info(f"Starting round {round_id} with {sims_per_round} simulations")
+        self.logger.info(f"Starting round {round_id} with {samples_per_round} simulations")
         
         # sample parameters
-        self.logger.debug(f"Proposal distribution: {self.proposal}")
+        # self.logger.debug(f"Proposal distribution: {self.proposal}")
 
         if self.proposal == self.task.prior:
-            # theta = self.proposal.sample((sims_per_round, *self.proposal_params.x_0.shape[:-1]), device=self.device)
-            theta = self.clean_sample((sims_per_round, *self.proposal_params.x_0.shape[:-1]), clean_sampling=clean_sampling).to(self.device)
+            theta = self.proposal.sample((samples_per_round, self.K), device=self.device)
+            # theta = self.clean_sample((samples_per_round, *self.proposal_params.x_0.shape[:-1]), clean_sampling=clean_sampling).to(self.device)
+            # theta = self.clean_sample_experimental((samples_per_round, self.K), clean_sampling=clean_sampling).to(self.device)
         else:
             # theta = self.proposal.sample((sims_per_round, ), device=self.device)
-            theta = self.clean_sample((sims_per_round, ), clean_sampling=clean_sampling).to(self.device)
-
-        self.logger.debug(f"x_0 shape {self.proposal_params.x_0.shape[:-1]}")
-        
-        self.logger.debug(f"Sampled {sims_per_round} parameters with shape {theta.shape}")
+            # theta = self.clean_sample((samples_per_round, ), clean_sampling=clean_sampling).to(self.device)
+            theta = self.clean_sample_experimental((samples_per_round, ), clean_sampling=clean_sampling).to(self.device)
+            
+        # self.logger.debug(f"Sampled {samples_per_round} parameters with shape {theta.shape}")
 
         # simulate data
         hasnan = torch.isnan(theta)
@@ -132,13 +80,57 @@ class RoundManager:
         if hasnan.any():
             self.logger.info(f"Stopping round {round_id} because theta has nan")
             return -1
+
+        """
+        theta: [N, K, theta_dim] -> [N*sims_per_sample, K, theta_dim]
+        """
+        theta = theta.unsqueeze(0).expand(sims_per_sample, *theta.shape).flatten(0, 1)
         x = self.task.simulator.simulate(theta).to(self.device)
-        self.logger.debug(f"Simulated data with shape: {x.shape}")
+        # self.logger.debug(f"Simulated data with shape: {x.shape}")
 
         # summary statistics
         self.task.summary.to(self.device)
         features = self.task.summary(x).to(self.device)
-        self.logger.debug(f"Computed summary statistics with shape: {features.shape}")
+        # self.logger.debug(f"Computed summary statistics with shape: {features.shape}")
+
+        # store simulations
+        self.store.add(theta, features, round_id)
+
+        self.logger.info(f"Round {round_id} completed - stored {samples_per_round} simulations")
+
+    def run_round(self, round_id, sims_per_round, clean_sampling):
+
+        # Log round start
+        self.logger.info(f"Starting round {round_id} with {sims_per_round} simulations")
+        
+        # sample parameters
+        # self.logger.debug(f"Proposal distribution: {self.proposal}")
+
+        if self.proposal == self.task.prior:
+            # theta = self.proposal.sample((sims_per_round, *self.proposal_params.x_0.shape[:-1]), device=self.device)
+            theta = self.clean_sample((sims_per_round, *self.proposal_params.x_0.shape[:-1]), clean_sampling=clean_sampling)
+        else:
+            # theta = self.proposal.sample((sims_per_round, ), device=self.device)
+            theta = self.clean_sample((sims_per_round, ), clean_sampling=clean_sampling)
+
+        # self.logger.debug(f"x_0 shape {self.proposal_params.x_0.shape[:-1]}")
+        
+        # self.logger.debug(f"Sampled {sims_per_round} parameters with shape {theta.shape}")
+
+        # simulate data
+        hasnan = torch.isnan(theta)
+        while len(hasnan.shape) > 1:
+            hasnan = hasnan.any(dim=-1)
+        if hasnan.any():
+            self.logger.info(f"Stopping round {round_id} because theta has nan")
+            return -1
+        x = self.task.simulator.simulate(theta)
+        # self.logger.debug(f"Simulated data with shape: {x.shape}")
+
+        # summary statistics
+        self.task.summary.to(self.device)
+        features = self.task.summary(x.to(self.device))
+        # self.logger.debug(f"Computed summary statistics with shape: {features.shape}")
 
         # store simulations
         self.store.add(theta, features, round_id)
@@ -154,8 +146,6 @@ class RoundManager:
         
         # Extract training parameters for logging
         epochs = train_kwargs.get('epochs', 'default')
-        self.logger.info(f"Training parameters: epochs={epochs}")
-        
         # Train the estimator
         # loss_stats = self.estimator.train(dataset, **train_kwargs)
         loss_stats = self.estimator.train_experimental(dataset, **train_kwargs)
@@ -167,16 +157,16 @@ class RoundManager:
         if update_x:
             new_x_0 = self.task.simulate(self.proposal_params.theta_0).to(self.device)
             new_x_0 = self.task.summarize(new_x_0).to(self.device)
-            self.logger.debug(f"{self.proposal_params.x_0}, {new_x_0}")
+            self.logger.debug(f"old x_0: {self.proposal_params.x_0},\nnew x_0: {new_x_0}")
             self.proposal_params.x_0 = new_x_0
         return self.estimator.build_posterior(self.proposal_params)
     
     def update_proposal(self, posterior):
 
         self.logger.debug(f"Updating proposal distribution")
-        self.logger.debug(f"Old proposal: {self.proposal}")
+        # self.logger.debug(f"Old proposal: {self.proposal}")
         self.proposal = posterior
-        self.logger.debug(f"New proposal: {posterior}")
+        # self.logger.debug(f"New proposal: {posterior}")
     
 
     def run_sequential(
@@ -185,7 +175,7 @@ class RoundManager:
         sims_per_round,
         clean_sampling=False,
         upd_x=False,
-        sims_per_sample=10,
+        sims_per_sample=1,
         **train_kwargs,
     ):
         
@@ -216,7 +206,7 @@ class RoundManager:
             else:
                 update_x = False
             posterior = self.build_posterior(update_x=update_x)
-            self.logger.debug(f"Built posterior: {posterior}")
+            # self.logger.debug(f"Built posterior: {posterior}")
 
             self.update_proposal(posterior)
 
@@ -383,6 +373,7 @@ class RoundManager:
         self.buffer = torch.zeros(*shape, self.K, self.sample_shape, device=self.device)
         self.remaining = torch.ones(*shape, self.K, dtype=torch.bool, device=self.device)
 
+
         def _merge_samples(new_samples, valid_mask):
             """
             Заполняет еще пустые позиции в buffer.
@@ -427,44 +418,62 @@ class RoundManager:
             self.buffer[remaining_idx] = new_samples[valid_idx]
             self.remaining[remaining_idx] = False
 
-        def _mask(data: torch.Tensor) -> torch.Tensor | None:
+        def _mask(data: torch.Tensor, quantile_value=None):
             if data.numel() == 0:
-                return None
+                return None, None
             
             if self.task.check_support is None:
-                mask1 = torch.ones_like(data, dtype=torch.bool)
-                mask1 = mask1.all(dim=-1)
+                support_mask = torch.ones_like(data, dtype=torch.bool)
+                support_mask = support_mask.all(dim=-1)
             else:
-                mask1 = self.task.check_support(data)
-            self.logger.debug(f"mask1.dtype = {mask1.dtype}, check support is None: {self.task.check_support is None}")
-            self.logger.debug(f"data {data.shape}, mask1: {mask1.shape}")
+                support_mask = self.task.check_support(data)
+
+            # self.logger.debug(f"mask1.dtype = {support_mask.dtype}, check support is None: {self.task.check_support is None}")
+            # self.logger.debug(f"data {data.shape}, mask1: {support_mask.shape}")
 
             if self.proposal_params.method == 'Truncated':
                 try:
-                    logp = self.proposal.log_prob(data[mask1].to(self.device))
+                    logp = self.proposal.log_prob(data[support_mask].to(self.device))
 
-                    mask2 = (logp >= torch.quantile(logp, self.proposal_params.method_params.get('quantile', None)))
-                    mask = mask1.clone()
-                    mask[mask1] = mask2
-                    return mask
+                    if quantile_value is None:
+                        quantile_value = torch.quantile(logp, self.proposal_params.method_params.get('quantile', None))
+
+                    log_mask = (logp >= quantile_value)
+                    mask = support_mask.clone()
+                    mask[support_mask] = log_mask
+                    return mask, quantile_value
                 # если у prior не задана плотность, то мы не запускаем на нем truncated
                 # это в любом случае бесполезно
                 except NotImplementedError:
-                    return mask1
-            return mask1
+                    return support_mask, quantile_value
+            return support_mask, quantile_value
+
+        samples = self.proposal.sample(shape, device=self.device)
         
+        valid_mask, quantile_value = _mask(samples)
+
+        _merge_samples(samples, valid_mask)
+
+        # self.logger.debug(f"shapes self.remaining {self.remaining.shape}, valid_mask {valid_mask.shape}")
+                                        
+        self.logger.debug(
+            f"remaining: {self.remaining.sum().item()}, "
+        )
+        
+
         while self.remaining.any():
 
             samples = self.proposal.sample(shape, device=self.device)
 
-            valid_mask = _mask(samples)
+            valid_mask, _ = _mask(samples, quantile_value)
 
-            self.logger.debug(f"shapes self.remaining {self.remaining.shape}, valid_mask {valid_mask.shape}")
-                        
+            _merge_samples(samples, valid_mask)
+
+            # self.logger.debug(f"shapes self.remaining {self.remaining.shape}, valid_mask {valid_mask.shape}")
+                                    
             self.logger.debug(
                 f"remaining: {self.remaining.sum().item()}, "
             )
 
-            _merge_samples(samples, valid_mask)
 
         return self.buffer

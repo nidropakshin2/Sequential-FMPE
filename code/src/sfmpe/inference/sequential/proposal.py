@@ -93,7 +93,7 @@ class Proposal(Distribution):
             return self.sampler.sample(x_0=x_0_expanded, 
                                        n_steps=self.params.n_steps)
 
-
+        # OBSOLETETE: скорее всего это уже не работает
         elif self.params.method == "shitty-Truncated":
             # quantile = kwargs.get("quantile", None)
             assert self.params.method_params is not None
@@ -237,7 +237,7 @@ class Proposal(Distribution):
         self.flow_model.velocity_model.eval()
         self.flow_model.velocity_model.to(device)
 
-        self.params.task.logger.debug(f"batch_shape, t_exp, theta, x_0_exp {batch_shape, theta0.shape, x_0_expanded.shape}")
+        # self.params.task.logger.debug(f"log_prob batch_shape {batch_shape}")
         
         # --- ODE function ---
         def ode_func(t, state):

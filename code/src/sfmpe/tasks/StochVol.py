@@ -143,7 +143,7 @@ class LSTMSummary(Summary):
         self.fc = nn.Sequential(
             nn.Linear(self.hidden_dim, self.hidden_dim),
             nn.ReLU(),
-            nn.Dropout(self.dropout),
+            nn.LayerNorm(self.hidden_dim),
             nn.Linear(self.hidden_dim, self.output_dim),
         )
 

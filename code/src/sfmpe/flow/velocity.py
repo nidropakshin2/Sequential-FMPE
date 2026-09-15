@@ -10,6 +10,7 @@ class SimpleVelocityField(nn.Module):
         )
         for _ in range(num_layers):
             self.net.append(nn.Linear(hidden_dim, hidden_dim))
+            self.net.append(nn.LayerNorm(hidden_dim))
             self.net.append(nn.ReLU())
         self.net.append(nn.Linear(hidden_dim, theta_dim))
 

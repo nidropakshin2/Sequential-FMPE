@@ -42,6 +42,7 @@ class FlowMatchingEstimator:
         self.shuffle      = kwargs.pop('shuffle', False)
         self.show_every   = kwargs.pop('show_every', None)
         self.cfg_mode     = kwargs.pop('cfg_mode', False)
+        self.num_workers  = kwargs.pop('num_workers', 4) 
 
         if kwargs:
             raise TypeError(f"train() got unexpected keyword arguments: {', '.join(kwargs.keys())}")
@@ -58,12 +59,16 @@ class FlowMatchingEstimator:
         loss_stats = []
         min_loss   = torch.inf
 
-        dataloader = DataLoader(dataset=dataset, batch_size=self.batch_size, shuffle=self.shuffle)
+        dataloader = DataLoader(dataset=dataset, 
+                                batch_size=self.batch_size, 
+                                shuffle=self.shuffle, 
+                                num_workers=self.num_workers)
 
         for epoch in range(self.epochs + 1):
             batch_loss = 0
             for theta_1_batch, x_batch in dataloader:
-                theta_1, x = self.dataset_prepocessor(theta_1_batch, x_batch)
+                theta_1, x = self.dataset_prepocessor(theta_1_batch.to(self.device), 
+                                                      x_batch.to(self.device))
                 theta_0 = self.flow_model.init_dist.sample_like(theta_1).to(self.device)
             
                 t = self.flow_model.path.time_dist.sample((*theta_0.shape[:-1], 1)).to(self.device)

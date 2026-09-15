@@ -29,10 +29,10 @@ class SimulationStore:
         #     return 0
         
         # TODO: на GPU не хватает памяти чтоб хранить все это дерьмо
-        self.theta.append(theta.detach())
-        self.x.append(x.detach())
+        self.theta.append(theta.detach().cpu())
+        self.x.append(x.detach().cpu())
         self.round_id.append(
-            torch.full((*theta.shape[:-1], ), round_id, device=theta.device)
+            torch.full((*theta.shape[:-1], ), round_id, device="cpu")
         )
         # print("SimStore1: ", self.theta[-1].shape, self.x[-1].shape, self.round_id[-1].shape)
 
