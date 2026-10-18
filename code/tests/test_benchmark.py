@@ -183,6 +183,55 @@ def test_benchmark_runner_allows_writable_output_override(tmp_path: Path):
     assert runner.output_dir.is_dir()
 
 
+def test_smc_abc_uses_cpu_task_even_when_benchmark_device_is_cuda(
+    tmp_path: Path,
+    monkeypatch,
+):
+    code_dir = Path(__file__).resolve().parents[1]
+    config_path = tmp_path / "benchmark.yaml"
+    config_path.write_text(
+        yaml.safe_dump(
+            {
+                "device": "cpu",
+                "tasks": {"Gaussian": str(code_dir / "configs" / "gaussian.yaml")},
+                "posterior_samples": 8,
+                "diagnostics": {
+                    "ppc_samples": 2,
+                    "sensitivity_enabled": False,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    runner = BenchmarkRunner(config_path)
+    runner.device = "cuda"
+    observed_task_devices: list[torch.device] = []
+
+    def fake_fit(task_name, method, task, observation, budget, meter):
+        observed_task_devices.append(task.device)
+
+        def sample_posterior(x, num_samples):
+            return task.true_posterior(x).sample((num_samples,))
+
+        return sample_posterior
+
+    monkeypatch.setattr(runner, "_fit", fake_fit)
+    observation = torch.tensor([0.2, -0.1])
+    row, samples = runner._evaluate_target(
+        task_name="Gaussian",
+        method="SMC_ABC",
+        budget=40,
+        replicate=0,
+        seed=1,
+        observation=observation,
+        observation_scale=torch.ones(2),
+    )
+
+    assert observed_task_devices == ["cpu"]
+    assert samples.device.type == "cpu"
+    assert row["inference_simulator_draws"] == 0
+
+
 def test_kaggle_notebook_code_cells_are_valid_python():
     notebook_path = (
         Path(__file__).resolve().parents[1]

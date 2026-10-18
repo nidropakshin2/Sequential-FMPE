@@ -117,11 +117,14 @@ class BenchmarkRunner:
             raise TypeError(f"Task configuration {task_path} must be a mapping.")
         return dict(task_config)
 
-    def _make_task(self, task_name: str):
+    def _make_task(self, task_name: str, device: str | None = None):
         task_type = TASK_TYPES.get(task_name.casefold())
         if task_type is None:
             raise ValueError(f"Unsupported task {task_name!r}.")
-        return task_type(self._task_config(task_name), device=self.device)
+        return task_type(
+            self._task_config(task_name),
+            device=device or self.device,
+        )
 
     def _make_simulator_callable(self, task):
         def simulate_and_summarize(theta: torch.Tensor) -> torch.Tensor:
@@ -313,7 +316,7 @@ class BenchmarkRunner:
                 show_progress_bars=False,
             )
             return smc(
-                x.to(self.device),
+                x.to("cpu"),
                 num_particles=particles,
                 num_initial_pop=initial_population,
                 num_simulations=budget,
@@ -338,7 +341,7 @@ class BenchmarkRunner:
             result = cast(Any, distribution).sample((num_samples,))
             if not isinstance(result, torch.Tensor):
                 raise TypeError("SMC-ABC posterior sampling did not return a tensor.")
-            return result.to(self.device)
+            return result.to("cpu")
 
         return sample_posterior
 
@@ -370,7 +373,10 @@ class BenchmarkRunner:
         observation_scale: torch.Tensor,
     ) -> tuple[dict[str, Any], torch.Tensor]:
         _set_seed(seed)
-        task = self._make_task(task_name)
+        task = self._make_task(
+            task_name,
+            device="cpu" if method == "SMC_ABC" else self.device,
+        )
         meter = _SimulatorCallMeter(task.simulator)
         inference_start = time.perf_counter()
         sample_posterior = self._fit(
