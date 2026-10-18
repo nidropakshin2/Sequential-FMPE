@@ -1,0 +1,53 @@
+device: auto
+
+flow:
+  init_dist: normal
+  velocity_model:
+    type: simple
+    params:
+      hidden_dim: 64
+      num_layers: 3
+  path:
+    type: affine
+
+optimizer:
+  type: Adam
+  params:
+    task:
+      summary:
+        lr: 0.0001
+    flow_model:
+      lr: 0.0001
+
+loss: MSELoss
+
+proposal:
+  method: Truncated
+  n_steps: 32
+  params:
+    quantile: 0.1
+
+initial:
+  # Omit theta_0 to draw it from the configured task prior.
+  # theta_0: [1.2621, 0.4558]
+
+logger:
+  name: SIR
+  level: INFO
+  log_to_console: true
+  log_to_file: true
+  log_file_path: ./logs/sir.log
+
+run_sequential:
+  num_rounds: 3
+  sims_per_round: 1000
+  sims_per_sample: 1
+  clean_sampling: true
+  upd_x: false
+  training:
+    epochs: 1000
+    show_every: 100
+    batch_size: 1000
+    shuffle: true
+    num_workers: 0
+    path: ./models/sir.pth

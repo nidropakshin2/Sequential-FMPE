@@ -4,7 +4,10 @@ version = "0.1.0"
 description = "Sequential Flow Matching for Simulation-Based Inference"
 dependencies = [
     "torch",
-    "torchdiffeq"
+    "torchdiffeq",
+    "PyYAML",
+    "sbi",
+    "matplotlib"
 ]
 
 [build-system]

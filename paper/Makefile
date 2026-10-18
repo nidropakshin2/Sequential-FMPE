@@ -1,4 +1,4 @@
-SRC_NAME = matan
+SRC_NAME = term
 # OUT_NAME = main
 
 all: build clean

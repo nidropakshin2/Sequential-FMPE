@@ -1,14 +1,17 @@
 import torch
 import torch.nn as nn
+from torch.distributions import constraints, Distribution
 
-from sfmpe.core.distributions import Distribution
 from sfmpe.core.simulator import Simulator
 from sfmpe.core.summary import Summary
 from sfmpe.tasks.base_task import Task
 from sfmpe.utils.logger import Logger, setup_logging
 
 
+
 class StochVolPrior(Distribution):
+    arg_constraints = {}
+
     def __init__(self, config: dict):
         """
         Prior for stochastic volatility model
@@ -32,7 +35,23 @@ class StochVolPrior(Distribution):
         self.m_loc = config.get("m_loc", -1.5)
         self.m_scale = config.get("m_scale", 1.0)
 
-    def sample(self, size, **kwargs):
+    @property
+    def support(self):
+        return constraints.independent(
+            constraints.stack(
+                [
+                    constraints.real,
+                    constraints.interval(-1.0, 1.0),
+                    constraints.positive,
+                    constraints.real,
+                ],
+                dim=-1,
+            ),
+            reinterpreted_batch_ndims=1,
+        )
+
+
+    def sample(self, sample_shape=(1, ), **kwargs):
         device = kwargs.pop("device", torch.device("cpu"))
         if kwargs:
             raise TypeError(
@@ -41,11 +60,11 @@ class StochVolPrior(Distribution):
             )
 
         # mu ~ Normal
-        mu = self.mu_loc + self.mu_scale * torch.randn(*size, 1, device=device)
+        mu = self.mu_loc + self.mu_scale * torch.randn(*sample_shape, 1, device=device)
 
         # phi* ~ Beta(alpha, beta), phi = 2*phi* - 1
         beta_dist = torch.distributions.Beta(self.phi_alpha, self.phi_beta)
-        phi_star = beta_dist.sample((*size, 1)).to(device)
+        phi_star = beta_dist.sample((*sample_shape, 1)).to(device)
         phi = 2.0 * phi_star - 1.0
 
         # sigma^2 ~ Inverse-Gamma(shape, scale)
@@ -53,22 +72,73 @@ class StochVolPrior(Distribution):
             concentration=self.sigma_ig_shape,
             rate=self.sigma_ig_scale
         )
-        sigma2 = 1.0 / gamma_dist.sample((*size, 1)).to(device)
+        sigma2 = 1.0 / gamma_dist.sample((*sample_shape, 1)).to(device)
         sigma = torch.sqrt(sigma2)
 
         # m ~ Normal
-        m = self.m_loc + self.m_scale * torch.randn(*size, 1, device=device)
+        m = self.m_loc + self.m_scale * torch.randn(*sample_shape, 1, device=device)
 
         return torch.cat([mu, phi, sigma, m], dim=-1)
 
-    def log_prob(self, value: torch.Tensor, **kwargs):
-        raise NotImplementedError("log_prob() is not implemented for StochVolPrior")
+    def log_prob(self, value: torch.Tensor, **kwargs) -> torch.Tensor:
+        """
+        value: тензор формы (..., 4) с [mu, phi, sigma, m]
+        Возвращает: тензор формы (...)
+        """
+        import math
+
+        mu    = value[..., 0]
+        phi   = value[..., 1]
+        sigma = value[..., 2]
+        m     = value[..., 3]
+
+        log_2pi = math.log(2 * math.pi)
+
+        # --- mu ~ Normal(mu_loc, mu_scale) ---
+        log_p_mu = (-0.5 * ((mu - self.mu_loc) / self.mu_scale) ** 2
+                    - math.log(self.mu_scale)
+                    - 0.5 * log_2pi)
+
+        # --- phi* = (phi+1)/2 ~ Beta(alpha, beta), phi in (-1, 1) ---
+        phi_star = 0.5 * (phi + 1.0)
+        eps = torch.finfo(value.dtype).eps
+        safe_phi_star = phi_star.clamp(min=eps, max=1.0 - eps)
+        safe_sigma = sigma.clamp_min(torch.finfo(value.dtype).tiny)
+        log_p_phi = (
+            (self.phi_alpha - 1.0) * torch.log(safe_phi_star)
+            + (self.phi_beta - 1.0) * torch.log1p(-safe_phi_star)
+            - math.lgamma(self.phi_alpha)
+            - math.lgamma(self.phi_beta)
+            + math.lgamma(self.phi_alpha + self.phi_beta)
+            - math.log(2.0)                                # якобиан phi -> phi*
+        )
+
+        # --- sigma^2 ~ InvGamma(shape, scale), sigma = sqrt(sigma^2) ---
+        log_p_sigma = (
+            self.sigma_ig_shape * math.log(self.sigma_ig_scale)
+            - math.lgamma(self.sigma_ig_shape)
+            - (2.0 * self.sigma_ig_shape + 1.0) * torch.log(safe_sigma)
+            - self.sigma_ig_scale / safe_sigma.pow(2)
+            + math.log(2.0)                                # якобиан sigma^2 -> sigma
+        )
+
+        # --- m ~ Normal(m_loc, m_scale) ---
+        log_p_m = (-0.5 * ((m - self.m_loc) / self.m_scale) ** 2
+                - math.log(self.m_scale)
+                - 0.5 * log_2pi)
+
+        log_p = log_p_mu + log_p_phi + log_p_sigma + log_p_m
+
+        # True support: phi in (-1, 1) и sigma > 0
+        valid = (phi > -1.0) & (phi < 1.0) & (sigma > 0.0)
+        return torch.where(valid, log_p, torch.full_like(log_p, float("-inf")))
 
 
 class StochVolSimulator(Simulator):
+    """Simulate returns with AR(1) log variance and stationary initial state."""
+
     def __init__(self, config: dict):
         self.T = config.get("T", 100)
-        self.v0 = config.get("v0", 0.0)
         # Дополнительные параметры, которые могут быть переопределены при вызове simulate
         self._extra = config.get("extra", {})
 
@@ -80,7 +150,7 @@ class StochVolSimulator(Simulator):
                 return x
 
         T = kwargs.pop("T", assign_value(self.T))
-        v0 = kwargs.pop("v0", assign_value(self.v0))
+        v0 = kwargs.pop("v0", None)
 
         mu = theta[..., 0]
         phi = theta[..., 1]
@@ -88,13 +158,27 @@ class StochVolSimulator(Simulator):
         m = theta[..., 3]
 
         batch_shape = theta.shape[:-1]
-        x = torch.zeros((*batch_shape, T), device=theta.device)
-        v = torch.zeros(batch_shape, device=theta.device) + v0
+        x = torch.zeros((*batch_shape, T), device=theta.device, dtype=theta.dtype)
+        if torch.any((phi <= -1.0) | (phi >= 1.0) | (sigma <= 0.0)):
+            raise ValueError("StochVol parameters must satisfy -1 < phi < 1 and sigma > 0.")
+
+        if v0 is None:
+            stationary_std = sigma / torch.sqrt(1.0 - phi.square())
+            v = m + stationary_std * torch.randn(
+                batch_shape, device=theta.device, dtype=theta.dtype
+            )
+        else:
+            initial_v = torch.as_tensor(v0, device=theta.device, dtype=theta.dtype)
+            v = torch.zeros(batch_shape, device=theta.device, dtype=theta.dtype) + initial_v
 
         for t in range(T):
             stdev = torch.clamp(torch.exp(v / 2.0), max=100)
-            x[..., t] = mu + stdev * torch.randn(*batch_shape, device=theta.device)
-            v = m + phi * (v - m) + sigma * torch.randn(*batch_shape, device=theta.device)
+            x[..., t] = mu + stdev * torch.randn(
+                batch_shape, device=theta.device, dtype=theta.dtype
+            )
+            v = m + phi * (v - m) + sigma * torch.randn(
+                batch_shape, device=theta.device, dtype=theta.dtype
+            )
 
         return x.unsqueeze(-1)
 
@@ -192,19 +276,8 @@ class StochVolTask(Task):
         self.data_dim = self.summary.emb_dim
 
     def check_support(self, theta: torch.Tensor) -> torch.Tensor:
-        
-        # clamp_min = torch.tensor([-1, 0.25, 0.05, -5]).to(theta.device)
-        # clamp_max = torch.tensor([1, 1, 0.8, 2.5]).to(theta.device)
+        return self.prior.support.check(theta)
 
-        clamp_min = torch.tensor([-torch.inf, 0.25, 0.05, -torch.inf]).to(theta.device)
-        clamp_max = torch.tensor([torch.inf, 1, 0.8, torch.inf]).to(theta.device)
-
-
-        mask = (clamp_min <= theta) & (theta <= clamp_max)
-        mask = mask.all(dim=-1)
-
-        return mask
-        
 
     def build_prior(self):
         return StochVolPrior(self.prior_parameters)

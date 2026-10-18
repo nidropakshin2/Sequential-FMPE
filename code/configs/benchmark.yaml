@@ -1,0 +1,36 @@
+seed: 2026
+device: auto
+tasks:
+  Gaussian: gaussian.yaml
+  SIR: benchmark_sir.yaml
+  StochVol: benchmark_stochvol.yaml
+methods:
+  - SFMPE
+  - SNPE_C
+  - SMC_ABC
+budgets: [100, 1000, 10000]
+replicates: 10
+rounds: 3
+posterior_samples: 256
+output: ../results/benchmark
+sfmpe_proposal_methods:
+  StochVol: NPE-A
+
+training:
+  epochs: 20
+  stop_after_epochs: 8
+  batch_size: 64
+  learning_rate: 0.0005
+  validation_fraction: 0.1
+
+smc_abc:
+  particles: 100
+  initial_population: 500
+  epsilon_decay: 0.5
+
+diagnostics:
+  ppc_samples: 128
+  sensitivity_enabled: true
+  sensitivity_scale: 0.1
+  sensitivity_samples: 128
+  sbc_c2st: false

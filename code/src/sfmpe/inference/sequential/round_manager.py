@@ -42,7 +42,6 @@ class RoundManager:
         self.validator = validator
         
         # Log initialization
-        self.logger.info(f"RoundManager initialized with device: {device}")
         self.logger.info(f"Task: {task.__class__.__name__}")
         self.logger.info(f"Estimator: {estimator.__class__.__name__}")
 
@@ -176,9 +175,12 @@ class RoundManager:
         clean_sampling=False,
         upd_x=False,
         sims_per_sample=1,
+        device='cpu',
         **train_kwargs,
     ):
-        
+
+        self.device = device
+
         self.logger.info(f"Starting sequential training with {num_rounds} rounds")
         self.logger.info(f"Simulations per round: {sims_per_round}")
         self.logger.info(f"Training kwargs: {train_kwargs}")
@@ -236,13 +238,13 @@ class RoundManager:
             """Отфильтровать и добавить чистые образцы в буфер."""
             if data.numel() == 0:
                 return
-            if self.task.check_support is None:
-                mask = torch.ones_like(data)
-                mask.all(dim=-1)
-            else:
-                mask = self.task.check_support(data)
+            try:
+                support_mask = self.task.prior.support.check(data)
+            except AttributeError:
+                support_mask = torch.ones_like(data, dtype=torch.bool)
+                support_mask = support_mask.all(dim=-1)
 
-            clean = data[mask]
+            clean = data[support_mask]
             if self.proposal_params.method == 'Truncated':
                 try:
                     logp = self.proposal.log_prob(clean.to(self.device))
@@ -422,11 +424,11 @@ class RoundManager:
             if data.numel() == 0:
                 return None, None
             
-            if self.task.check_support is None:
+            try:
+                support_mask = self.task.prior.support.check(data)
+            except AttributeError:
                 support_mask = torch.ones_like(data, dtype=torch.bool)
                 support_mask = support_mask.all(dim=-1)
-            else:
-                support_mask = self.task.check_support(data)
 
             # self.logger.debug(f"mask1.dtype = {support_mask.dtype}, check support is None: {self.task.check_support is None}")
             # self.logger.debug(f"data {data.shape}, mask1: {support_mask.shape}")

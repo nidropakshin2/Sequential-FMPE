@@ -1,0 +1,15 @@
+prior:
+  mu_loc: 0.0
+  mu_scale: 0.2
+  phi_alpha: 20.0
+  phi_beta: 1.5
+  sigma_ig_shape: 2.5
+  sigma_ig_scale: 0.025
+  m_loc: -1.5
+  m_scale: 1.0
+
+simulator:
+  T: 64
+
+summary:
+  type: handmade

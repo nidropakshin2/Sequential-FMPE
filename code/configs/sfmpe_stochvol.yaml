@@ -1,0 +1,57 @@
+device: auto
+
+flow:
+  init_dist:
+    type: normal
+  velocity_model:
+    type: simple
+    params:
+      hidden_dim: 32
+      num_layers: 4
+  path:
+    type: affine
+    params:
+      time_dist:
+        type: beta
+        params:
+          alpha: 0.8
+          beta: 0.5
+
+optimizer:
+  type: Adam
+  params:
+    task:
+      summary:
+        lr: 0.0001
+    flow_model:
+      lr: 0.00001
+
+loss: MSELoss
+
+proposal:
+  method: Truncated
+  n_steps: 32
+  params:
+    scale: 0.8
+    quantile: 0.5
+
+logger:
+  name: StochVol
+  level: INFO
+  log_to_console: true
+  log_to_file: true
+  log_file_path: ./logs/stochvol.log
+
+run_sequential:
+  num_rounds: 3
+  sims_per_round: 10000
+  sims_per_sample: 1
+  clean_sampling: true
+  upd_x: false
+  training:
+    epochs: 10000
+    show_every: 1000
+    batch_size: 10
+    shuffle: true
+    num_workers: 0
+    path: ./models/stochvol.pth

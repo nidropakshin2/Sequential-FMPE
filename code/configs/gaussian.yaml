@@ -1,0 +1,19 @@
+prior:
+  mean: [0.0, 0.0]
+  covariance:
+    - [1.5, 0.3]
+    - [0.3, 1.0]
+
+simulator:
+  likelihood_shift: [0.0, 0.0]
+  likelihood_covariance:
+    - [0.4, 0.1]
+    - [0.1, 0.6]
+
+summary:
+  type: identity
+
+logger:
+  name: Gaussian
+  level: INFO
+  log_to_file: false

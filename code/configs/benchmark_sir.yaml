@@ -1,0 +1,12 @@
+prior:
+  gamma_range: [0.05, 0.5]
+  beta_range: [0.5, 5.0]
+
+simulator:
+  S: 1000
+  I: 100
+  R: 0
+  T: 40
+
+summary:
+  type: handmade

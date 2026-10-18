@@ -1,10 +1,10 @@
 import torch
 from abc import ABC, abstractmethod
-from torch.distributions import MultivariateNormal, Normal as UnivariateNormal, Chi2
+from torch.distributions import Distribution as TorchDistibution, MultivariateNormal, Normal as UnivariateNormal, Chi2
 
 
 
-class Distribution(ABC):
+class Distribution(ABC, TorchDistibution):
     def __init__(self):
         self.params = None
 

@@ -1,53 +1,158 @@
 import torch
+from torch.distributions import Transform, biject_to, constraints, Distribution
 
-from sfmpe.core.distributions import Distribution
+
+# from sfmpe.core.distributions import Distribution
 from sfmpe.core.simulator import Simulator
 from sfmpe.core.summary import Summary
 from sfmpe.tasks.base_task import Task
 from sfmpe.utils.logger import Logger, setup_logging
 
 
+class SIRSupport(constraints.Constraint):
+    event_dim = 1
+    is_discrete = False
+
+    def __init__(self, gamma_range, r0_range):
+        self.gamma_range = gamma_range
+        self.r0_range = r0_range
+
+    def check(self, value):
+        beta, gamma = value.unbind(dim=-1)
+        gamma_min, gamma_max = self.gamma_range
+        r0_min, r0_max = self.r0_range
+        valid_gamma = (gamma >= gamma_min) & (gamma <= gamma_max)
+        safe_gamma = gamma.clamp_min(torch.finfo(value.dtype).tiny)
+        r0 = beta / safe_gamma
+        return valid_gamma & (r0 >= r0_min) & (r0 <= r0_max) & (beta > 0)
+
+    def __repr__(self):
+        return f"SIRSupport(gamma_range={self.gamma_range}, r0_range={self.r0_range})"
+
+
+class SIRTransform(Transform):
+    domain = constraints.independent(constraints.real, 1)
+    bijective = True
+    sign = 1
+
+    def __init__(self, gamma_range, r0_range, cache_size=1):
+        super().__init__(cache_size=cache_size)
+        self.gamma_range = gamma_range
+        self.r0_range = r0_range
+
+    def with_cache(self, cache_size=1):
+        return SIRTransform(self.gamma_range, self.r0_range, cache_size)
+
+    @property
+    def codomain(self):
+        return SIRSupport(self.gamma_range, self.r0_range)
+
+    def _call(self, value):
+        r0_min, r0_max = self.r0_range
+        gamma_min, gamma_max = self.gamma_range
+        r0 = r0_min + (r0_max - r0_min) * value[..., 0].sigmoid()
+        gamma = gamma_min + (gamma_max - gamma_min) * value[..., 1].sigmoid()
+        return torch.stack((r0 * gamma, gamma), dim=-1)
+
+    def _inverse(self, value):
+        beta, gamma = value.unbind(dim=-1)
+        r0_min, r0_max = self.r0_range
+        gamma_min, gamma_max = self.gamma_range
+        r0_fraction = ((beta / gamma) - r0_min) / (r0_max - r0_min)
+        gamma_fraction = (gamma - gamma_min) / (gamma_max - gamma_min)
+        return torch.stack(
+            (torch.logit(r0_fraction), torch.logit(gamma_fraction)), dim=-1
+        )
+
+    def log_abs_det_jacobian(self, value, transformed):
+        r0_min, r0_max = self.r0_range
+        gamma_min, gamma_max = self.gamma_range
+        log_r0_derivative = (
+            torch.log(torch.as_tensor(r0_max - r0_min, device=value.device, dtype=value.dtype))
+            + torch.nn.functional.logsigmoid(value[..., 0])
+            + torch.nn.functional.logsigmoid(-value[..., 0])
+        )
+        log_gamma_derivative = (
+            torch.log(torch.as_tensor(gamma_max - gamma_min, device=value.device, dtype=value.dtype))
+            + torch.nn.functional.logsigmoid(value[..., 1])
+            + torch.nn.functional.logsigmoid(-value[..., 1])
+        )
+        return log_r0_derivative + torch.log(transformed[..., 1]) + log_gamma_derivative
+
+
+@biject_to.register(SIRSupport)
+def _biject_to_sir_support(constraint):
+    return SIRTransform(constraint.gamma_range, constraint.r0_range)
+
 
 class SIRPrior(Distribution):
+    arg_constraints = {}
+
     def __init__(self, gamma_range=(0.05, 0.5), beta_range=(0.5, 5.0)):
         """
-            gamma_range: tuple, default=(0.05, 0.5)
-            beta_range: tuple, default=(0.5, 5.0)
+        gamma_range: tuple, default=(0.05, 0.5)
+        beta_range: tuple, default=(0.5, 5.0)
         """
         super().__init__()
         self.gamma_range = gamma_range
         self.beta_range = beta_range
-    
-    def sample(self, size, **kwargs):
-        """
-            size: tuple, e.g. (B, N, dim)
-            kwargs
-                device: str, default='cpu'
-        """
 
+    @property
+    def support(self):
+        return SIRSupport(self.gamma_range, self.beta_range)
+
+    def sample(self, sample_shape=(1, ), **kwargs):
+        """
+        size: tuple, e.g. (B, N, dim)
+        kwargs
+            device: str, default='cpu'
+        """
         def sample_log_uniform(low, high, size):
-            """
-                low, high: scalars (floats), low > 0
-                size: tuple, e.g. (B,)
-            """
-            u = torch.rand(size)
-            log_low = torch.log(torch.tensor(low))
-            log_high = torch.log(torch.tensor(high))
+            u = torch.rand(size, device=device)
+            log_low = torch.log(torch.tensor(low, device=device, dtype=torch.float32))
+            log_high = torch.log(torch.tensor(high, device=device, dtype=torch.float32))
             return torch.exp(log_low + u * (log_high - log_low))
-        
+
         device = kwargs.pop('device', torch.device('cpu'))
 
         if kwargs:
             raise TypeError(f"sample() got unexpected keyword arguments: {', '.join(kwargs.keys())}")
 
-
-        gamma = sample_log_uniform(self.gamma_range[0], self.gamma_range[1], (*size, 1))
-        R0 = sample_log_uniform(self.beta_range[0], self.beta_range[1], (*size, 1))
+        gamma = sample_log_uniform(self.gamma_range[0], self.gamma_range[1], (*sample_shape, 1))
+        R0 = sample_log_uniform(self.beta_range[0], self.beta_range[1], (*sample_shape, 1))
         beta = R0 * gamma
         return torch.cat([beta, gamma], dim=-1).to(device)
-    
+
     def log_prob(self, value: torch.Tensor, **kwargs) -> torch.Tensor:
-        raise NotImplementedError("log_prob() is not implemented for StochVolPrior")
+        import math
+        """
+        value: тензор формы (..., 2) с [beta, gamma]
+        Возвращает: тензор формы (...)
+        """
+        beta = value[..., 0]
+        gamma = value[..., 1]
+
+        beta_lo, beta_hi = self.beta_range
+        gamma_lo, gamma_hi = self.gamma_range
+
+        # log-нормировочные константы log-log-uniform (Python floats, device-agnostic)
+        log_norm_beta = math.log(math.log(beta_hi / beta_lo))
+        log_norm_gamma = math.log(math.log(gamma_hi / gamma_lo))
+
+        tiny = torch.finfo(value.dtype).tiny
+        safe_beta = beta.clamp_min(tiny)
+        safe_gamma = gamma.clamp_min(tiny)
+
+        # log p(beta, gamma) = log p_R0(R0) + log p_gamma(gamma) - log(gamma)
+        log_p = (
+            -torch.log(safe_beta)
+            - torch.log(safe_gamma)
+            - log_norm_beta
+            - log_norm_gamma
+        )
+
+        valid = self.support.check(value)
+        return torch.where(valid, log_p, torch.full_like(log_p, float("-inf")))
 
 
 class SIRSimulator(Simulator):
@@ -229,13 +334,7 @@ class SIRTask(Task):
         self.data_dim = self.summary.emb_dim
     
     def check_support(self, theta):
-        # clamp_min = torch.log(torch.tensor([sir_task.prior.beta_range[0] + sir_task.prior.gamma_range[0], sir_task.prior.gamma_range[0]]))
-        # clamp_max = torch.tensor([sir_task.prior.beta_range[1], sir_task.prior.gamma_range[1]])
-        clamp_min = torch.tensor([0.025, 0.05]).to(theta.device)
-        clamp_max = torch.tensor([2.5, 0.5]).to(theta.device)
-        mask = (theta >= clamp_min) & (theta <= clamp_max)
-        mask = mask.all(dim=-1)
-        return mask
+        return self.prior.support.check(theta)
 
 
     def build_prior(self):

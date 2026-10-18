@@ -1,6 +1,6 @@
 import torch
 from abc import ABC, abstractmethod
-from sfmpe.core.distributions import Distribution
+from torch.distributions import Distribution
 from sfmpe.core.simulator import Simulator
 from sfmpe.utils.logger import get_default_logger
 

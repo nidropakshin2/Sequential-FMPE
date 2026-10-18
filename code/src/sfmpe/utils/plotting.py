@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 
 
-def dist_plot(*dists, true_param=None, pred_param=None):
+def dist_plot(*dists, true_param=None, pred_param=None, dist_labels=None, param_labels=None, path=None):
     # assert len(dist1.shape) == len(dist2.shape) and dist1.shape[-1] == dist2.shape[-1]
     theta_dim = dists[0].shape[-1]
     K = dists[0].shape[-2]
@@ -24,6 +24,14 @@ def dist_plot(*dists, true_param=None, pred_param=None):
                 
                 if pred_param is not None:
                     ax[i][j].axvline(x=pred_param[k, j], linestyle='--', color='red')
+            if dist_labels is not None:
+                ax[i][0].set_ylabel(f"{dist_labels[i]}")
+                    
+        if param_labels is not None:
+            ax[-1][j].set_xlabel(f"{param_labels[j]}")
+
+    if path is not None:
+        plt.savefig(path)
 
 
 class Validator:

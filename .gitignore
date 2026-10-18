@@ -5,5 +5,7 @@ code/.pytest_cache
 code/tests/__pycache__
 code/tests/test_models/*
 code/tests/logs/*
+code/.kagglex
+code/dist
 */__pycache__/*
 code/src/**/__pycache__/**
