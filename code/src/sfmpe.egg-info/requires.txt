@@ -1,2 +1,5 @@
 torch
 torchdiffeq
+PyYAML
+sbi
+matplotlib
