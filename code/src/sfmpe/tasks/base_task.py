@@ -14,6 +14,10 @@ class Task(ABC):
         self.device = device
 
         self.prior = self.build_prior()
+        # sbi's check_if_prior_on_device calls prior.sample() without a
+        # device kwarg, so the prior object itself must know which device it
+        # lives on. SIR/StochVol priors read self.device as their default.
+        self.prior.device = self.device
         self.simulator = self.build_simulator()
         self.summary = self.build_summary()
         self.logger = self.build_logger()

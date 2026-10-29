@@ -18,10 +18,20 @@ def export_benchmark_results(
 
     return export(result_dir, report_dir)
 
+
+def merge_benchmark_results(
+    input_dirs: list[str | Path] | tuple[str | Path, ...],
+    output_dir: str | Path,
+) -> Path:
+    from sfmpe.benchmark.report import merge_benchmark_results as merge
+
+    return merge(input_dirs, output_dir)
+
 __all__ = [
     "BenchmarkRunner",
     "exact_posterior_metrics",
     "export_benchmark_results",
+    "merge_benchmark_results",
     "posterior_predictive_metrics",
     "run_benchmark",
     "sensitivity_metrics",

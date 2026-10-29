@@ -1,0 +1,66 @@
+# Benchmark-scoped SFMPE configuration for StochVolTask.
+#
+# Referenced from benchmark YAML files via `sfmpe_configs`. Flow and optimizer
+# hyperparameters follow the task-specific sfmpe_stochvol.yaml (beta path time
+# distribution, slower flow-model learning rate). The runner passes `device`
+# explicitly, so `device: auto` only applies when this file is used standalone.
+device: auto
+
+flow:
+  init_dist:
+    type: normal
+  velocity_model:
+    type: simple
+    params:
+      hidden_dim: 32
+      num_layers: 4
+  path:
+    type: affine
+    params:
+      time_dist:
+        type: beta
+        params:
+          alpha: 0.8
+          beta: 0.5
+
+optimizer:
+  type: Adam
+  params:
+    task:
+      summary:
+        lr: 0.0001
+    flow_model:
+      lr: 0.00001
+
+loss: MSELoss
+
+proposal:
+  method: Truncated
+  n_steps: 8
+  params:
+    quantile: 0.5
+
+logger:
+  name: Benchmark-StochVol
+  level: WARNING
+  log_to_console: false
+  log_to_file: false
+
+run_sequential:
+  # Only `clean_sampling` from this section is consumed by the benchmark
+  # runner (rounds/budgets come from the benchmark YAML). This task hard-
+  # rejects invalid simulated parameters (phi must be in (-1, 1), sigma>0),
+  # so clean sampling stays enabled: proposal samples are refilled until
+  # they satisfy prior.support (the quantile mask operates on proposal
+  # log-probs; watch for ODE "underflow in dt" on early untrained flows).
+  num_rounds: 3
+  sims_per_round: 100
+  sims_per_sample: 1
+  clean_sampling: true
+  upd_x: true
+  training:
+    epochs: 20
+    show_every: 1000
+    batch_size: 64
+    shuffle: true
+    num_workers: 0

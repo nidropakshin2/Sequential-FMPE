@@ -1,9 +1,26 @@
+# Canonical benchmark configuration.
+#
+# Everything a benchmark run needs is declared in this one file:
+#   - tasks:              task-name -> task YAML (relative to configs/)
+#   - sfmpe_configs:      task-name -> per-task SFMPE YAML (relative to configs/)
+#   - devices:            explicit device policy (see comments)
+#   - kaggle:             consumed by the sfmpe-kaggle submit CLI (phase 2)
+#
+# This file must stay in sync with benchmark_kaggle_smoke.yaml, which overrides
+# only smoke-facing knobs (budgets, replicates, rounds, diagnostics) so the
+# Kaggle smoke run and the full run exercise the same code paths.
+
 seed: 2026
 device: auto
 tasks:
   Gaussian: gaussian.yaml
   SIR: benchmark_sir.yaml
   StochVol: benchmark_stochvol.yaml
+sfmpe_configs:
+  Gaussian: sfmpe_benchmark_gaussian.yaml
+  SIR: sfmpe_benchmark_sir.yaml
+  StochVol: sfmpe_benchmark_stochvol.yaml
+
 methods:
   - SFMPE
   - SNPE_C
@@ -13,20 +30,90 @@ replicates: 10
 rounds: 3
 posterior_samples: 256
 output: ../results/benchmark
-sfmpe_proposal_methods:
-  StochVol: NPE-A
+# Score the model after every sequential round (rounds axis: metric vs
+# 1..rounds). Single-shot methods (SMC-ABC) keep round=null.
+evaluate_rounds: true
+# Graceful wall-clock guard: stop between targets after this many hours,
+# write partial results, and resume on the next launch (completed targets
+# are skipped). Keep below Kaggle's 12 h session limit.
+time_limit_hours: 11
 
-training:
-  epochs: 20
-  stop_after_epochs: 8
-  batch_size: 64
-  learning_rate: 0.0005
+devices:
+  # 'auto' inherits the top-level `device` value.
+  nn: auto        # SFMPE and SNPE-C estimator/simulator device
+  smc_abc: cpu    # sbi SMCABC computes kernel covariance via numpy -> CPU
+  sbi_prior: auto # prior object for SNPE-C: sbi asserts it lives on the
+                  # training device (check_if_prior_on_device), so 'auto'
+                  # inherits the nn device.
+
+sfmpe_proposal_methods: {}
+# Per-task proposal methods (Truncated) live in the per-task sfmpe_configs
+# files; NPE-A/NPE-B are not canonical benchmark methods. This mapping stays
+# supported as an override hook but must stay empty in canonical configs.
+
+# Estimator training options, split per method. The old merged `training:`
+# block is still honored (fallback) when these blocks are absent.
+#
+# SFMPE: forwarded to fm_estimator.train as-is (`epochs` maps to its
+# max_epochs; `shuffle` overrides fm_estimator's False default because the
+# benchmark has always trained shuffled). `device` is NOT configurable here:
+# it is pinned by the devices.nn policy.
+sfmpe_training:
+  epochs: 20             # max number of epochs per round
+  stop_after_epochs: 8   # patience: stop after N epochs without validation gain
+  batch_size: 64         # clamped to the per-round simulation count
+  shuffle: true          # shuffle minibatches inside an epoch
+  num_workers: 0         # DataLoader workers (0 = same process)
+  show_every: null       # log train/validation loss every N epochs (null = off)
+  cfg_mode: false        # classifier-free guidance: mask x during training
+  path: null             # optional checkpoint for the best model state dict
   validation_fraction: 0.1
+  min_delta: 0.0         # minimal validation improvement per gainful epoch
+  validation_seed: null  # seed for the train/validation split generator
+
+# SNPE-C: forwarded to sbi's SNPE_C.train() as-is (sbi 0.21.0 signature;
+# num_simulations accounting is per round). Legacy keys `epochs` and
+# `batch_size` from the merged block map to `max_num_epochs` and
+# `training_batch_size`.
+snpe_c_training:
+  max_num_epochs: 20      # cap on epochs (sbi default is effectively unlimited)
+  stop_after_epochs: 8    # patience on validation log-prob
+  training_batch_size: 64 # clamped to the per-round simulation count
+  learning_rate: 0.0005   # Adam learning rate
+  validation_fraction: 0.1
+  num_atoms: 10           # atoms for the atomic classification loss
+  clip_max_norm: 5.0      # gradient-norm clipping; null disables it
+  resume_training: false  # restore optimizer/split from the last train() call
+  force_first_round_loss: false # plain MLE training (ignores proposal mismatch)
+  discard_prior_samples: false  # drop round-0 prior draws from training
+  use_combined_loss: false      # add MLE on prior draws (density-leak guard)
+  retrain_from_scratch: false   # fresh density estimator every round
+  show_train_summary: false     # print sbi's end-of-train summary
+  exclude_invalid_x: null       # append_simulations: drop invalid sims (null = auto)
+  dataloader_kwargs: null # extra DataLoader kwargs dict for sbi's train()
+  calibration_kernel: null  # loss calibration callable; null = sbi default
 
 smc_abc:
-  particles: 100
-  initial_population: 500
-  epsilon_decay: 0.5
+  # Particular budget accounting: `particles`/`initial_population` are clamped
+  # to budget fractions by the runner; `num_simulations` is pinned to the
+  # metered budget; `return_summary` stays False (benchmark needs a single
+  # posterior-distribution object, not a dict).
+  particles: 100             # num_particles per population
+  initial_population: 500    # first-round population size
+  num_workers: 1             # SMCABC worker count for simulations
+  epsilon_decay: 0.5         # multiplicative epsilon decay per population
+  distance_based_decay: false
+  ess_min: null              # effective-sample-size floor; null disables
+  kernel_variance_scale: 1.0 # perturbation-kernel variance rescale
+  use_last_pop_samples: true
+  kde: true                  # fit a KDE posterior on accepted particles
+  kde_kwargs: {}             # e.g. {bandwidth: None, transform: ...}
+  kde_sample_weights: true   # weighted KDE by SMC weights
+  lra: false                 # local regression adjustment
+  lra_with_weights: false
+  sass: false                # SASS simulation-based transform
+  sass_fraction: 0.25
+  sass_expansion_degree: 1
 
 diagnostics:
   ppc_samples: 128
@@ -34,3 +121,13 @@ diagnostics:
   sensitivity_scale: 0.1
   sensitivity_samples: 128
   sbc_c2st: false
+
+kaggle:
+  # Consumed by `sfmpe-kaggle` (phase 2): one command submits this benchmark.
+  kernel_base: sfmpe-benchmark
+  title: SFMPE benchmark
+  gpu: t4-2x
+  internet: true
+  max_hours: 11
+  submit_script: notebooks/benchmark_kaggle_standalone.py
+  output_dir: results/kaggle-benchmark

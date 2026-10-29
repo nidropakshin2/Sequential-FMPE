@@ -1,0 +1,63 @@
+# Benchmark-scoped SFMPE configuration for SIRTask.
+#
+# Referenced from benchmark YAML files via `sfmpe_configs`. Proposal values
+# follow the smoke-tested benchmark settings (benchmark_sfmpe.yaml); flow and
+# optimizer hyperparameters follow the task-specific sfmpe_sir.yaml. The
+# runner passes `device` explicitly, so `device: auto` only applies when this
+# file is used standalone.
+device: auto
+
+flow:
+  init_dist:
+    type: normal
+  velocity_model:
+    type: simple
+    params:
+      hidden_dim: 64
+      num_layers: 3
+  path:
+    type: affine
+
+optimizer:
+  type: Adam
+  params:
+    task:
+      summary:
+        lr: 0.0001
+    flow_model:
+      lr: 0.0001
+
+loss: MSELoss
+
+proposal:
+  method: Truncated
+  n_steps: 8
+  params:
+    quantile: 0.5
+
+logger:
+  name: Benchmark-SIR
+  level: WARNING
+  log_to_console: false
+  log_to_file: false
+
+run_sequential:
+  # Only `clean_sampling` from this section is consumed by the benchmark
+  # runner (rounds/budgets come from the benchmark YAML). It selects whether
+  # proposal samples are filtered via proposal log-prob quantiles; the
+  # Truncated proposal implements that filter through the ODE log-density
+  # path, which can underflow on early untrained flows. This task's
+  # simulator is numerically tolerant, so clean sampling stays disabled
+  # (matching the smoke-tested remote runs). Set true to enable clean
+  # sampling for a task.
+  num_rounds: 1
+  sims_per_round: 100
+  sims_per_sample: 1
+  clean_sampling: false
+  upd_x: false
+  training:
+    epochs: 20
+    show_every: 1000
+    batch_size: 64
+    shuffle: true
+    num_workers: 0

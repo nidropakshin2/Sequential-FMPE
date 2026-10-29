@@ -1,9 +1,21 @@
+# Smoke benchmark configuration for Kaggle GPU verification.
+#
+# Same structure and task/sfmpe config wiring as benchmark.yaml; only the
+# smoke-facing knobs differ (budgets, replicates, rounds, diagnostics,
+# optimizer patience, output directory). Keep inference budgets at or below
+# 100 simulations per target in this profile.
+
 seed: 2026
 device: cuda
 tasks:
   Gaussian: gaussian.yaml
   SIR: benchmark_sir.yaml
   StochVol: benchmark_stochvol.yaml
+sfmpe_configs:
+  Gaussian: sfmpe_benchmark_gaussian.yaml
+  SIR: sfmpe_benchmark_sir.yaml
+  StochVol: sfmpe_benchmark_stochvol.yaml
+
 methods:
   - SFMPE
   - SNPE_C
@@ -12,21 +24,76 @@ budgets: [40]
 replicates: 2
 rounds: 2
 posterior_samples: 64
-output: ./results/kaggle-smoke
-sfmpe_proposal_methods:
-  StochVol: NPE-A
+output: ../results/kaggle-smoke
+evaluate_rounds: true   # per-round metrics (rounds axis)
+time_limit_hours: 3     # smoke profile wall-clock guard
 
-training:
+devices:
+  # 'auto' inherits the top-level `device` value.
+  nn: auto        # SFMPE and SNPE-C estimator/simulator device
+  smc_abc: cpu    # sbi SMCABC computes kernel covariance via numpy -> CPU
+  sbi_prior: auto # prior object for SNPE-C: sbi asserts it lives on the
+                  # training device (check_if_prior_on_device), so 'auto'
+                  # inherits the nn device.
+
+sfmpe_proposal_methods: {}
+# Per-task proposal methods live in the per-task sfmpe_configs files.
+
+# Per-method training blocks (see benchmark.yaml for full option docs and
+# per-key defaults). The old merged `training:` block is still honored when
+# these are absent.
+# SFMPE -> fm_estimator.train kwargs (`epochs` = max_epochs).
+sfmpe_training:
   epochs: 8
   stop_after_epochs: 3
   batch_size: 32
+  shuffle: true
+  num_workers: 0
+  show_every: null
+  cfg_mode: false
+  path: null
+  validation_fraction: 0.2
+  min_delta: 0.0
+  validation_seed: null
+
+# SNPE-C -> sbi train() kwargs (legacy `epochs`/`batch_size` map to
+# `max_num_epochs`/`training_batch_size`).
+snpe_c_training:
+  max_num_epochs: 8
+  stop_after_epochs: 3
+  training_batch_size: 32
   learning_rate: 0.0005
   validation_fraction: 0.2
+  num_atoms: 10
+  clip_max_norm: 5.0
+  resume_training: false
+  force_first_round_loss: false
+  discard_prior_samples: false
+  use_combined_loss: false
+  retrain_from_scratch: false
+  show_train_summary: false
+  exclude_invalid_x: null
+  dataloader_kwargs: null
+  calibration_kernel: null
 
 smc_abc:
+  # Full sbi SMCABC.__call__ knobs (defaults documented in benchmark.yaml).
   particles: 20
   initial_population: 20
+  num_workers: 1
   epsilon_decay: 0.5
+  distance_based_decay: false
+  ess_min: null
+  kernel_variance_scale: 1.0
+  use_last_pop_samples: true
+  kde: true
+  kde_kwargs: {}
+  kde_sample_weights: true
+  lra: false
+  lra_with_weights: false
+  sass: false
+  sass_fraction: 0.25
+  sass_expansion_degree: 1
 
 diagnostics:
   ppc_samples: 16
@@ -34,3 +101,13 @@ diagnostics:
   sensitivity_scale: 0.1
   sensitivity_samples: 16
   sbc_c2st: false
+
+kaggle:
+  # Consumed by `sfmpe-kaggle` (phase 2): one command submits this benchmark.
+  kernel_base: sfmpe-benchmark-smoke
+  title: SFMPE benchmark smoke
+  gpu: t4-2x
+  internet: true
+  max_hours: 4
+  submit_script: notebooks/benchmark_kaggle_standalone.py
+  output_dir: results/kaggle-smoke

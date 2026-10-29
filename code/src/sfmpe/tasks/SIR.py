@@ -105,15 +105,16 @@ class SIRPrior(Distribution):
         """
         size: tuple, e.g. (B, N, dim)
         kwargs
-            device: str, default='cpu'
+            device: str; defaults to the device this prior was assigned by
+            its task (see base_task), falling back to 'cpu'.
         """
+        device = kwargs.pop("device", getattr(self, "device", torch.device("cpu")))
+
         def sample_log_uniform(low, high, size):
             u = torch.rand(size, device=device)
             log_low = torch.log(torch.tensor(low, device=device, dtype=torch.float32))
             log_high = torch.log(torch.tensor(high, device=device, dtype=torch.float32))
             return torch.exp(log_low + u * (log_high - log_low))
-
-        device = kwargs.pop('device', torch.device('cpu'))
 
         if kwargs:
             raise TypeError(f"sample() got unexpected keyword arguments: {', '.join(kwargs.keys())}")

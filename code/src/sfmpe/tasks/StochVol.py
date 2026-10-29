@@ -52,7 +52,7 @@ class StochVolPrior(Distribution):
 
 
     def sample(self, sample_shape=(1, ), **kwargs):
-        device = kwargs.pop("device", torch.device("cpu"))
+        device = kwargs.pop("device", getattr(self, "device", torch.device("cpu")))
         if kwargs:
             raise TypeError(
                 f"sample() got unexpected keyword arguments: "

@@ -12,7 +12,7 @@ import re
 from collections import defaultdict
 from collections.abc import Mapping, Sequence
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import yaml
 
@@ -115,6 +115,9 @@ def _write_markdown_report(
     by_task: dict[str, list[Mapping[str, Any]]] = defaultdict(list)
     for row in rows:
         by_task[str(row.get("task", "unknown"))].append(row)
+    # Rounds axis: only sequential models emit integer rounds; single-shot
+    # methods keep `round: null` (rendered as "-").
+    has_rounds = any(row.get("round") is not None for row in rows)
 
     lines = [
         "# Sequential SBI benchmark report",
@@ -128,11 +131,22 @@ def _write_markdown_report(
         "Interpret each metric according to its definition.",
         "",
     ]
+    if has_rounds:
+        lines.extend(
+            [
+                "Rows are (budget, round) pairs: `round` is the number of "
+                "completed sequential training rounds (the model is scored "
+                "after each round). Methods without sequential rounds "
+                "(SMC-ABC) have `round = -`.",
+                "",
+            ]
+        )
     for task in sorted(by_task):
         task_rows = sorted(
             by_task[task],
             key=lambda row: (
                 float(row.get("budget", 0)),
+                -1 if row.get("round") is None else int(row["round"]),
                 str(row.get("method", "")),
             ),
         )
@@ -146,22 +160,27 @@ def _write_markdown_report(
             if not available:
                 continue
             methods = sorted({str(row.get("method", "unknown")) for row in available})
+            round_prefix = "Round | " if has_rounds else ""
             lines.extend(
                 [
                     f"### {metric_name}",
                     "",
-                    "| Budget | " + " | ".join(methods) + " |",
-                    "|---:|" + "|".join("---:" for _ in methods) + "|",
+                    "| Budget | " + round_prefix + " | ".join(methods) + " |",
+                    "|---:|" + ("---:|" if has_rounds else "")
+                    + "|".join("---:" for _ in methods) + "|",
                 ]
             )
-            budgets = sorted(
+            budget_round_pairs = sorted(
                 {
-                    float(budget)
+                    (
+                        float(budget),
+                        -1 if row.get("round") is None else int(row["round"]),
+                    )
                     for row in available
                     if isinstance((budget := row.get("budget")), (int, float))
                 }
             )
-            for budget in budgets:
+            for budget, round_value in budget_round_pairs:
                 cells = []
                 for method in methods:
                     row = next(
@@ -173,15 +192,41 @@ def _write_markdown_report(
                                 and float(candidate["budget"]) == budget
                             )
                             and candidate.get("method") == method
+                            and (
+                                -1
+                                if candidate.get("round") is None
+                                else int(candidate["round"])
+                            )
+                            == round_value
                         ),
                         {},
                     )
                     cells.append(_format_cell(row, mean_column))
+                round_cell = (
+                    f"{round_value if round_value >= 0 else '-'} | "
+                    if has_rounds
+                    else ""
+                )
                 lines.append(
-                    f"| {budget} | " + " | ".join(cells) + " |"
+                    f"| {budget} | " + round_cell + " | ".join(cells) + " |"
                 )
             lines.append("")
     path.write_text("\n".join(lines), encoding="utf-8")
+
+
+def _final_round_rows(
+    rows: Sequence[Mapping[str, Any]],
+) -> list[Mapping[str, Any]]:
+    """Keep only the last-round summary per (task, method, budget) for
+    budget-axis plots; single-shot rows (round=None) are kept as-is."""
+    best: dict[tuple, tuple[int, Mapping[str, Any]]] = {}
+    for row in rows:
+        key = (row.get("task"), row.get("method"), row.get("budget"))
+        round_value = row.get("round")
+        rank = -1 if round_value is None else int(round_value)
+        if key not in best or rank > best[key][0]:
+            best[key] = (rank, row)
+    return [row for _rank, row in best.values()]
 
 
 def _plot_metric(
@@ -196,7 +241,7 @@ def _plot_metric(
     import matplotlib.pyplot as plt
 
     by_method: dict[str, list[tuple[float, float, Any]]] = defaultdict(list)
-    for row in rows:
+    for row in _final_round_rows(rows):
         budget = row.get("budget")
         metric_value = row.get(metric_column)
         if (
@@ -247,6 +292,120 @@ def _plot_metric(
     plt.close(figure)
 
 
+def _plot_rounds_metric(
+    path: Path,
+    task: str,
+    metric_column: str,
+    rows: Sequence[Mapping[str, Any]],
+) -> None:
+    """Plot a metric against the number of sequential rounds at the largest
+    budget of this task (one line per sequential method)."""
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    eligible = [
+        row
+        for row in rows
+        if row.get("task") == task
+        and row.get("round") is not None
+        and isinstance(row.get(metric_column), (int, float))
+        and math.isfinite(cast(float, row.get(metric_column)))
+    ]
+    if not eligible:
+        return
+    max_budget = max(
+        float(cast(float, row["budget"]))
+        for row in eligible
+        if isinstance(row.get("budget"), (int, float))
+    )
+    by_method: dict[str, list[tuple[int, float, Any]]] = defaultdict(list)
+    for row in eligible:
+        if float(cast(float, row["budget"])) != max_budget:
+            continue
+        metric_name = metric_column.removeprefix("mean_")
+        by_method[str(row.get("method", "unknown"))].append(
+            (
+                int(cast(int, row["round"])),
+                float(cast(float, row[metric_column])),
+                row.get(f"std_{metric_name}"),
+            )
+        )
+    if not by_method:
+        return
+
+    figure, axis = plt.subplots(figsize=(7.5, 4.5), constrained_layout=True)
+    for method, method_rows in sorted(by_method.items()):
+        method_rows.sort(key=lambda row: row[0])
+        rounds = [row[0] for row in method_rows]
+        means = [row[1] for row in method_rows]
+        standard_deviations = [row[2] for row in method_rows]
+        if all(
+            isinstance(value, (int, float)) and math.isfinite(value)
+            for value in standard_deviations
+        ):
+            axis.errorbar(
+                rounds,
+                means,
+                yerr=[float(value) for value in standard_deviations],
+                marker="o",
+                capsize=3,
+                label=method,
+            )
+        else:
+            axis.plot(rounds, means, marker="o", label=method)
+    axis.set_xlabel("Sequential training rounds")
+    axis.set_ylabel(metric_column.removeprefix("mean_").replace("_", " "))
+    axis.set_title(
+        f"{task}: {metric_column.removeprefix('mean_')} vs rounds "
+        f"(budget {max_budget:g})"
+    )
+    axis.grid(True, alpha=0.25)
+    axis.legend()
+    figure.savefig(path, dpi=160)
+    plt.close(figure)
+
+
+def _write_jsonl(path: Path, rows: Sequence[Mapping[str, Any]]) -> None:
+    with path.open("w", encoding="utf-8") as stream:
+        for row in rows:
+            stream.write(json.dumps(row, allow_nan=False) + "\n")
+
+
+def merge_benchmark_results(
+    input_dirs: Sequence[str | Path],
+    output_dir: str | Path,
+) -> Path:
+    """Merge per-shard result directories into one and re-export reports.
+
+    Shards are launched as separate Kaggle kernels; this concatenates their
+    ``target_metrics.jsonl``/``benchmark_summary.jsonl`` (dedupe by the
+    runner's row keys, later inputs win) and regenerates CSV/Markdown/plots.
+    """
+    from sfmpe.benchmark.runner import _summary_key, _target_key
+
+    output = Path(output_dir).resolve()
+    output.mkdir(parents=True, exist_ok=True)
+    targets: dict[tuple, dict[str, Any]] = {}
+    summaries: dict[tuple, dict[str, Any]] = {}
+    for directory in input_dirs:
+        directory_path = Path(directory)
+        for row in _read_jsonl(directory_path / "target_metrics.jsonl"):
+            targets[_target_key(row)] = row
+        for row in _read_jsonl(directory_path / "benchmark_summary.jsonl"):
+            summaries[_summary_key(row)] = row
+    if not targets or not summaries:
+        raise FileNotFoundError(
+            "No shard results to merge: each input directory needs "
+            "target_metrics.jsonl and benchmark_summary.jsonl."
+        )
+    _write_jsonl(output / "target_metrics.jsonl", list(targets.values()))
+    _write_jsonl(output / "benchmark_summary.jsonl", list(summaries.values()))
+    export_benchmark_results(output)
+    return output
+
+
 def export_benchmark_results(
     result_dir: str | Path,
     report_dir: str | Path | None = None,
@@ -281,6 +440,14 @@ def export_benchmark_results(
             _plot_metric(
                 figures_dir
                 / f"{_safe_filename(task)}_{_safe_filename(metric_column)}.png",
+                task,
+                metric_column,
+                summary_rows,
+            )
+            _plot_rounds_metric(
+                figures_dir
+                / f"{_safe_filename(task)}_rounds_"
+                f"{_safe_filename(metric_column)}.png",
                 task,
                 metric_column,
                 summary_rows,
@@ -330,6 +497,23 @@ def main() -> None:
             "results and generated reports."
         ),
     )
+    parser.add_argument(
+        "--merge-inputs",
+        type=Path,
+        nargs="+",
+        default=None,
+        help=(
+            "Merge these per-shard result directories (each containing "
+            "target_metrics.jsonl and benchmark_summary.jsonl) instead of "
+            "running inference."
+        ),
+    )
+    parser.add_argument(
+        "--merge-output",
+        type=Path,
+        default=None,
+        help="Destination for merged results (default: configured output dir).",
+    )
     args = parser.parse_args()
     config_path = args.config.resolve()
     result_dir = (
@@ -337,6 +521,15 @@ def main() -> None:
         if args.output_dir is not None
         else _configured_result_dir(config_path)
     )
+    if args.merge_inputs:
+        merged_dir = merge_benchmark_results(
+            args.merge_inputs,
+            args.merge_output.resolve()
+            if args.merge_output is not None
+            else result_dir,
+        )
+        print(f"Merged shard results and reports saved to: {merged_dir}")
+        return
     if not args.process_only:
         summaries = run_benchmark(config_path, output_dir=result_dir)
         print(f"Benchmark completed: {len(summaries)} task/method/budget groups.")

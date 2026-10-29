@@ -6,6 +6,7 @@ code/tests/__pycache__
 code/tests/test_models/*
 code/tests/logs/*
 code/.kagglex
+code/results
 code/dist
 code/output
 **/sbi-logs/**

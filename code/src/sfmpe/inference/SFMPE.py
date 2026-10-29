@@ -89,7 +89,21 @@ class SFMPE:
         pipeline.run()
     """
 
-    def __init__(self, task: Task, config_path: str | FilePath):
+    def __init__(
+        self,
+        task: Task,
+        config_path: str | FilePath,
+        device: str | None = None,
+    ):
+        """Create the SFMPE pipeline from a YAML file.
+
+        Args:
+            task: Task instance; the config must not contain a 'task' section.
+            config_path: Path to the pipeline YAML configuration.
+            device: Optional device override ('cpu', 'cuda', or 'auto'). When
+                given it wins over the YAML ``device`` value, so benchmark
+                runners can keep one authoritative device policy.
+        """
         self.config_path = FilePath(config_path)
         with self.config_path.open(encoding="utf-8") as config_file:
             loaded_config = yaml.safe_load(config_file)
@@ -101,11 +115,11 @@ class SFMPE:
                 "instance to SFMPE(task, config_path)"
             )
         self.task = task
-        configured_device = self.config.get("device")
-        if configured_device is None:
+        effective_device = device if device is not None else self.config.get("device")
+        if effective_device is None:
             self.device = getattr(task, "device", "cpu")
         else:
-            self.device = _resolve_device(configured_device)
+            self.device = _resolve_device(effective_device)
             task.device = self.device
         self.task.summary.to(self.device)
         self.logger = _build_logger(

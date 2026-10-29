@@ -1,0 +1,60 @@
+# Run schedule: split the canonical benchmark into Kaggle-sized shards.
+#
+# Each shard is an overlay on `base_config` (benchmark.yaml): it selects the
+# tasks/methods/budgets/replicates for one submission. Results are written
+# incrementally and every completed target is skipped on re-runs, so a shard
+# that hits the wall-clock limit can simply be relaunched.
+#
+# One shard per (task, method): all budgets and replicates of that pair.
+# Nine shards -> nine Kaggle sessions. Shards are independent, so they can
+# be launched one after another (or in parallel on separate accounts).
+#
+# Usage on Kaggle (list the exact commands with --list-shards):
+#   kagglex run --dir . --file notebooks/benchmark_kaggle_standalone.py \
+#     --include-data src pyproject.toml configs --gpu t4-2x \
+#     --env SFMPE_BENCHMARK_CONFIG=benchmark.yaml \
+#     --env SFMPE_BENCHMARK_SHARD=gaussian-sfmpe
+#
+# Usage locally (all shards share the output directory; the runner resumes):
+#   python notebooks/benchmark_kaggle_standalone.py --config configs/benchmark.yaml \
+#     --shard gaussian-sfmpe --device cpu
+#
+# List shards + ready-to-copy commands:
+#   python notebooks/benchmark_kaggle_standalone.py --list-shards
+#
+# Merge downloaded shard outputs into one report:
+#   python -m sfmpe.benchmark.report --config configs/benchmark.yaml \
+#     --merge-inputs <shard-output-dir> ... --merge-output results/benchmark-merged
+#
+# Splitting further: add `budgets:` and/or `replicates:` to a shard overlay
+# to pin a smaller slice, e.g. budgets: [100, 1000] so that a 10k-budget
+# slice gets its own kernel.
+base_config: benchmark.yaml
+shards:
+  - name: gaussian-sfmpe
+    tasks: [Gaussian]
+    methods: [SFMPE]
+  - name: gaussian-snpe-c
+    tasks: [Gaussian]
+    methods: [SNPE_C]
+  - name: gaussian-smc-abc
+    tasks: [Gaussian]
+    methods: [SMC_ABC]
+  - name: sir-sfmpe
+    tasks: [SIR]
+    methods: [SFMPE]
+  - name: sir-snpe-c
+    tasks: [SIR]
+    methods: [SNPE_C]
+  - name: sir-smc-abc
+    tasks: [SIR]
+    methods: [SMC_ABC]
+  - name: stochvol-sfmpe
+    tasks: [StochVol]
+    methods: [SFMPE]
+  - name: stochvol-snpe-c
+    tasks: [StochVol]
+    methods: [SNPE_C]
+  - name: stochvol-smc-abc
+    tasks: [StochVol]
+    methods: [SMC_ABC]
