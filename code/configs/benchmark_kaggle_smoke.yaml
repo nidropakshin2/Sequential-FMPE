@@ -8,7 +8,7 @@
 seed: 2026
 device: cuda
 tasks:
-  Gaussian: gaussian.yaml
+  Gaussian: benchmark_gaussian.yaml
   SIR: benchmark_sir.yaml
   StochVol: benchmark_stochvol.yaml
 sfmpe_configs:
@@ -22,10 +22,9 @@ methods:
   - SMC_ABC
 budgets: [40]
 replicates: 2
-rounds: 2
+rounds: [1, 2]          # rounds axis: same budget split into 1 and 2 rounds
 posterior_samples: 64
 output: ../results/kaggle-smoke
-evaluate_rounds: true   # per-round metrics (rounds axis)
 time_limit_hours: 3     # smoke profile wall-clock guard
 
 devices:

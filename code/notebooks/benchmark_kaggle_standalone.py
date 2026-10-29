@@ -50,9 +50,16 @@ limit can simply be submitted again. ``time_limit_hours`` in the config (or
     python benchmark_kaggle_standalone.py --shard sir-snpe-c
     kagglex run ... --env SFMPE_BENCHMARK_SHARD=sir-snpe-c
 
-Rounds axis: ``evaluate_rounds: true`` scores the posterior after every
-sequential training round (1..rounds), so metrics can be compared by number
-of rounds; single-shot SMC-ABC rows carry ``round: null``.
+A shard without an explicit config runs the schedule's ``base_config``
+(``benchmark.yaml``), not the smoke profile. When passing several envs to
+``kagglex``, put them after ONE ``--env``: ``--env "K1=V1 K2=V2"`` (its
+``--env`` uses ``nargs="*"`` and repeated flags overwrite each other).
+
+Rounds axis: ``rounds: [1, 2, 3]`` runs one independent experiment per
+value, each splitting the SAME total simulation budget evenly across that
+many rounds (1000 -> [1000], [500, 500], [334, 333, 333]). Metrics carry a
+``rounds`` field, so models trained with 1/2/3 rounds are compared at a
+fixed simulation budget; single-shot SMC-ABC rows carry ``rounds: null``.
 
 Merging shard outputs (run locally after downloading each session):
 
@@ -248,8 +255,8 @@ def print_schedule(schedule: dict, schedule_path: Path) -> None:
         print(
             "    kagglex run --dir . --file notebooks/benchmark_kaggle_standalone.py "
             "--include-data src pyproject.toml configs --gpu t4-2x "
-            f"--env {BENCHMARK_CONFIG_ENV}={base_config} "
-            f"--env {BENCHMARK_SHARD_ENV}={name}"
+            f'--env "{BENCHMARK_CONFIG_ENV}={base_config} '
+            f'{BENCHMARK_SHARD_ENV}={name}"'
         )
     print("")
     print(
@@ -258,6 +265,25 @@ def print_schedule(schedule: dict, schedule_path: Path) -> None:
         f"{base_config} --merge-inputs <shard-dir> ... --merge-output "
         "results/benchmark-merged"
     )
+
+
+def resolve_benchmark_config(
+    explicit: str | None,
+    env_value: str | None,
+    schedule: dict | None,
+    project_root: Path,
+) -> Path:
+    """Pick the benchmark YAML: --config > env > schedule base_config > smoke.
+
+    A shard selected without an explicit config runs the schedule's
+    ``base_config`` (e.g. benchmark.yaml) instead of the smoke profile, so
+    setting only ``SFMPE_BENCHMARK_SHARD`` does not silently shrink the run.
+    """
+    if explicit is None and env_value is None and schedule is not None:
+        base = str(schedule.get("base_config", "benchmark.yaml"))
+        print(f"Shard run uses the schedule base config: {base}")
+        return find_config_path(base, project_root)
+    return find_config_path(explicit, project_root, env_value=env_value)
 
 
 class _Tee:
@@ -442,9 +468,13 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--rounds",
+        nargs="+",
         type=int,
         default=None,
-        help="Override the number of sequential training rounds.",
+        help=(
+            "Override the rounds axis, e.g. --rounds 1 2 3: one experiment "
+            "per value, each splitting the total budget evenly."
+        ),
     )
     parser.add_argument(
         "--time-limit-hours",
@@ -499,22 +529,25 @@ def main() -> None:
     from sfmpe.benchmark.report import export_benchmark_results
     from sfmpe.benchmark.runner import run_benchmark
 
+    shard_name = args.shard or os.environ.get(BENCHMARK_SHARD_ENV)
+    schedule = None
+    if args.list_shards or shard_name or args.schedule:
+        schedule_path = find_schedule_path(args.schedule, project_root)
+        schedule = load_schedule(schedule_path)
+    if args.list_shards:
+        print_schedule(schedule, schedule_path)
+        return
+
     env_config = os.environ.get(BENCHMARK_CONFIG_ENV)
     if env_config and args.config is None:
         print(f"Using benchmark config from {BENCHMARK_CONFIG_ENV}: {env_config}")
-    config_path = find_config_path(args.config, project_root, env_value=env_config)
+    config_path = resolve_benchmark_config(
+        args.config, env_config, schedule, project_root
+    )
 
-    shard_name = args.shard or os.environ.get(BENCHMARK_SHARD_ENV)
-    if args.list_shards:
-        schedule_path = find_schedule_path(args.schedule, project_root)
-        print_schedule(load_schedule(schedule_path), schedule_path)
-        return
     overrides: dict = {}
     if shard_name:
-        schedule_path = find_schedule_path(args.schedule, project_root)
-        overrides.update(
-            shard_overrides(load_schedule(schedule_path), shard_name)
-        )
+        overrides.update(shard_overrides(schedule, shard_name))
         print(f"Using shard {shard_name!r} from {schedule_path}")
     if args.tasks:
         overrides["tasks"] = list(args.tasks)
@@ -524,8 +557,8 @@ def main() -> None:
         overrides["budgets"] = list(args.budgets)
     if args.replicates is not None:
         overrides["replicates"] = args.replicates
-    if args.rounds is not None:
-        overrides["rounds"] = args.rounds
+    if args.rounds:
+        overrides["rounds"] = list(args.rounds)
     if args.time_limit_hours is not None:
         overrides["time_limit_hours"] = args.time_limit_hours
 

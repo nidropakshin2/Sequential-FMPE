@@ -1,7 +1,7 @@
 # Benchmark-scoped SFMPE configuration for StochVolTask.
 #
 # Referenced from benchmark YAML files via `sfmpe_configs`. Flow and optimizer
-# hyperparameters follow the task-specific sfmpe_stochvol.yaml (beta path time
+# hyperparameters follow the task-specific settings (beta path time
 # distribution, slower flow-model learning rate). The runner passes `device`
 # explicitly, so `device: auto` only applies when this file is used standalone.
 device: auto
@@ -16,12 +16,12 @@ flow:
       num_layers: 4
   path:
     type: affine
-    params:
-      time_dist:
-        type: beta
-        params:
-          alpha: 0.8
-          beta: 0.5
+    # params:
+    #   time_dist:
+    #     type: beta
+    #     params:
+    #       alpha: 0.8
+    #       beta: 0.5
 
 optimizer:
   type: Adam

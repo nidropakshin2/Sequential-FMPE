@@ -1,9 +1,9 @@
 # Benchmark-scoped SFMPE configuration for GaussianTask.
 #
 # Referenced from benchmark YAML files via `sfmpe_configs`. Proposal and flow
-# values follow the smoke-tested benchmark settings (benchmark_sfmpe.yaml);
-# the runner passes `device` explicitly, so `device: auto` only applies when
-# this file is used standalone.
+# values follow the smoke-tested benchmark settings; the runner passes
+# `device` explicitly, so `device: auto` only applies when this file is used
+# standalone.
 device: auto
 
 flow:
@@ -51,7 +51,7 @@ run_sequential:
   num_rounds: 1
   sims_per_round: 100
   sims_per_sample: 1
-  clean_sampling: false
+  clean_sampling: true
   upd_x: false
   training:
     epochs: 20

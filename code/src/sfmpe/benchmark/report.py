@@ -116,8 +116,8 @@ def _write_markdown_report(
     for row in rows:
         by_task[str(row.get("task", "unknown"))].append(row)
     # Rounds axis: only sequential models emit integer rounds; single-shot
-    # methods keep `round: null` (rendered as "-").
-    has_rounds = any(row.get("round") is not None for row in rows)
+    # methods keep `rounds: null` (rendered as "-").
+    has_rounds = any(row.get("rounds") is not None for row in rows)
 
     lines = [
         "# Sequential SBI benchmark report",
@@ -134,10 +134,10 @@ def _write_markdown_report(
     if has_rounds:
         lines.extend(
             [
-                "Rows are (budget, round) pairs: `round` is the number of "
-                "completed sequential training rounds (the model is scored "
-                "after each round). Methods without sequential rounds "
-                "(SMC-ABC) have `round = -`.",
+                "Rows are (budget, rounds) pairs: `rounds` is the number of "
+                "sequential training rounds (the budget is split evenly across "
+                "them). Methods without sequential rounds "
+                "(SMC-ABC) have `rounds = -`.",
                 "",
             ]
         )
@@ -146,7 +146,7 @@ def _write_markdown_report(
             by_task[task],
             key=lambda row: (
                 float(row.get("budget", 0)),
-                -1 if row.get("round") is None else int(row["round"]),
+                -1 if row.get("rounds") is None else int(row["rounds"]),
                 str(row.get("method", "")),
             ),
         )
@@ -160,7 +160,7 @@ def _write_markdown_report(
             if not available:
                 continue
             methods = sorted({str(row.get("method", "unknown")) for row in available})
-            round_prefix = "Round | " if has_rounds else ""
+            round_prefix = "Rounds | " if has_rounds else ""
             lines.extend(
                 [
                     f"### {metric_name}",
@@ -174,7 +174,7 @@ def _write_markdown_report(
                 {
                     (
                         float(budget),
-                        -1 if row.get("round") is None else int(row["round"]),
+                        -1 if row.get("rounds") is None else int(row["rounds"]),
                     )
                     for row in available
                     if isinstance((budget := row.get("budget")), (int, float))
@@ -194,8 +194,8 @@ def _write_markdown_report(
                             and candidate.get("method") == method
                             and (
                                 -1
-                                if candidate.get("round") is None
-                                else int(candidate["round"])
+                                if candidate.get("rounds") is None
+                                else int(candidate["rounds"])
                             )
                             == round_value
                         ),
@@ -218,11 +218,11 @@ def _final_round_rows(
     rows: Sequence[Mapping[str, Any]],
 ) -> list[Mapping[str, Any]]:
     """Keep only the last-round summary per (task, method, budget) for
-    budget-axis plots; single-shot rows (round=None) are kept as-is."""
+    budget-axis plots; single-shot rows (rounds=None) are kept as-is."""
     best: dict[tuple, tuple[int, Mapping[str, Any]]] = {}
     for row in rows:
         key = (row.get("task"), row.get("method"), row.get("budget"))
-        round_value = row.get("round")
+        round_value = row.get("rounds")
         rank = -1 if round_value is None else int(round_value)
         if key not in best or rank > best[key][0]:
             best[key] = (rank, row)
@@ -309,7 +309,7 @@ def _plot_rounds_metric(
         row
         for row in rows
         if row.get("task") == task
-        and row.get("round") is not None
+        and row.get("rounds") is not None
         and isinstance(row.get(metric_column), (int, float))
         and math.isfinite(cast(float, row.get(metric_column)))
     ]
@@ -327,7 +327,7 @@ def _plot_rounds_metric(
         metric_name = metric_column.removeprefix("mean_")
         by_method[str(row.get("method", "unknown"))].append(
             (
-                int(cast(int, row["round"])),
+                int(cast(int, row["rounds"])),
                 float(cast(float, row[metric_column])),
                 row.get(f"std_{metric_name}"),
             )

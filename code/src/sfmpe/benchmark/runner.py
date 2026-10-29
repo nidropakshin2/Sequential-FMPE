@@ -63,14 +63,33 @@ def _balanced_round_budgets(total: int, rounds: int) -> list[int]:
     ]
 
 
+def _normalized_rounds(value: Any) -> list[int]:
+    """Normalize the `rounds` config entry to a sorted list of positive ints.
+
+    ``rounds: 3`` and ``rounds: [1, 2, 3]`` are both accepted; a list runs
+    one experiment per value (the rounds axis) with the same total budget
+    split evenly across that many rounds.
+    """
+    values = value if isinstance(value, (list, tuple)) else [value]
+    try:
+        rounds = sorted({int(item) for item in values})
+    except (TypeError, ValueError) as error:
+        raise ValueError(
+            f"rounds must be an integer or a list of integers, got {value!r}"
+        ) from error
+    if not rounds or rounds[0] < 1:
+        raise ValueError(f"rounds values must be >= 1, got {value!r}")
+    return rounds
+
+
 def _target_key(row: Mapping[str, Any]) -> tuple:
     """Resume/dedup identity of one target-metrics row."""
     return (
         row.get("task"),
         row.get("method"),
         int(row.get("budget", 0)),
+        row.get("rounds"),
         int(row.get("replicate", 0)),
-        row.get("round"),
     )
 
 
@@ -80,7 +99,7 @@ def _summary_key(row: Mapping[str, Any]) -> tuple:
         row.get("task"),
         row.get("method"),
         int(row.get("budget", 0)),
-        row.get("round"),
+        row.get("rounds"),
     )
 
 
@@ -141,7 +160,7 @@ class BenchmarkRunner:
         self.config = dict(config)
         if overrides:
             # Shard/CLI overrides (tasks, methods, budgets, replicates,
-            # rounds, evaluate_rounds, time_limit_hours, output, ...).
+            # rounds, time_limit_hours, output, ...).
             overrides = dict(overrides)
             requested_tasks = overrides.get("tasks")
             if isinstance(requested_tasks, (list, tuple, set)):
@@ -172,10 +191,6 @@ class BenchmarkRunner:
             else (self.root / configured_output).resolve()
         )
         self.output_dir.mkdir(parents=True, exist_ok=True)
-        # Per-round evaluation: emit one metrics row per sequential training
-        # round (the rounds axis). Off by default so hand-written configs
-        # keep the single final-row layout.
-        self.evaluate_rounds = bool(self.config.get("evaluate_rounds", False))
         time_limit_hours = self.config.get("time_limit_hours")
         self.time_limit_seconds = (
             float(time_limit_hours) * 3600.0
@@ -238,12 +253,20 @@ class BenchmarkRunner:
     #
     # 'sfmpe_configs' maps each task name to a per-task SFMPE YAML file
     # (flow/proposal hyperparameters live with the task). 'sfmpe_config' is
-    # the single shared fallback used when the mapping is absent.
+    # an explicit shared single-file alternative for custom configs; there is
+    # no implicit default file, so a missing entry fails loudly.
     def _sfmpe_config_path(self, task_name: str) -> Path:
         sfmpe_configs = self.config.get("sfmpe_configs", {})
         if task_name in sfmpe_configs:
             return (self.root / sfmpe_configs[task_name]).resolve()
-        return (self.root / self.config.get("sfmpe_config", "benchmark_sfmpe.yaml")).resolve()
+        shared = self.config.get("sfmpe_config")
+        if shared is not None:
+            return (self.root / shared).resolve()
+        raise ValueError(
+            f"No SFMPE pipeline config for task {task_name!r}: add it to "
+            "'sfmpe_configs' in the benchmark YAML, or set a shared "
+            "'sfmpe_config' file."
+        )
 
     def _task_config(self, task_name: str) -> dict[str, Any]:
         task_paths = self.config.get("tasks", {})
@@ -289,8 +312,8 @@ class BenchmarkRunner:
         task,
         observation: torch.Tensor,
         budget: int,
+        rounds: int,
         meter: _SimulatorCallMeter,
-        on_round: Callable[[int, Any], None] | None = None,
     ):
         meter.set_phase("setup")
         sfmpe_config = self._sfmpe_config_path(task_name)
@@ -311,7 +334,7 @@ class BenchmarkRunner:
             )
         round_budgets = _balanced_round_budgets(
             remaining_budget,
-            self.config.get("rounds", 3),
+            rounds,
         )
         # Forwarded to fm_estimator.train (Phase 1 knobs only; `device` is
         # pinned by the device policy, not configurable here). `epochs` maps
@@ -367,9 +390,6 @@ class BenchmarkRunner:
             )
         meter.set_phase("inference")
         for round_id, round_budget in enumerate(round_budgets):
-            # Re-set on every round: per-round evaluation switches the phase
-            # to sampling/ppc/sensitivity between rounds.
-            meter.set_phase("inference")
             result = pipeline.manager.run_round_experimental(
                 round_id,
                 round_budget,
@@ -394,11 +414,6 @@ class BenchmarkRunner:
             )
             posterior = pipeline.manager.build_posterior(update_x=False)
             pipeline.manager.update_proposal(posterior)
-            if on_round is not None:
-                # Evaluate synchronously: build_posterior wraps the shared
-                # flow model, so round-r scores must be taken before later
-                # rounds mutate its weights.
-                on_round(round_id + 1, self._sfmpe_sampler(pipeline, task, nn_device))
         meter.set_phase("sampling")
         return (
             self._sfmpe_sampler(pipeline, task, nn_device),
@@ -429,8 +444,8 @@ class BenchmarkRunner:
         task,
         observation: torch.Tensor,
         budget: int,
+        rounds: int,
         meter: _SimulatorCallMeter,
-        on_round: Callable[[int, Any], None] | None = None,
     ):
         from sbi.inference import SNPE_C, simulate_for_sbi
 
@@ -487,13 +502,10 @@ class BenchmarkRunner:
         density_estimator = None
         round_budgets = _balanced_round_budgets(
             budget,
-            self.config.get("rounds", 3),
+            rounds,
         )
         meter.set_phase("inference")
         for round_id, round_budget in enumerate(round_budgets):
-            # Re-set on every round: per-round evaluation switches the phase
-            # to sampling/ppc/sensitivity between rounds.
-            meter.set_phase("inference")
             theta, x = simulate_for_sbi(
                 simulator,
                 proposal=proposal,
@@ -533,10 +545,6 @@ class BenchmarkRunner:
                 density_estimator,
                 sample_with="rejection",
             )
-            if on_round is not None:
-                # Synchronous per-round scoring: sbi retrains the same
-                # neural net in place in later rounds.
-                on_round(round_id + 1, self._snpe_c_sampler(posterior, nn_device))
             proposal = posterior.set_default_x(observation)
 
         if posterior is None or density_estimator is None:
@@ -565,13 +573,13 @@ class BenchmarkRunner:
         task,
         observation: torch.Tensor,
         budget: int,
+        rounds: int,
         meter: _SimulatorCallMeter,
-        on_round: Callable[[int, Any], None] | None = None,
     ):
         from sbi.inference import SMCABC
 
-        # Single-shot method: no sequential rounds, so `on_round` is never
-        # called and the runner emits one final row with round=None.
+        # Single-shot method: `rounds` is ignored and the runner records
+        # rounds=None for its one evaluation row.
 
         settings = dict(self.config.get("smc_abc", {}))
         if budget < 20:
@@ -652,21 +660,19 @@ class BenchmarkRunner:
         task,
         observation: torch.Tensor,
         budget: int,
+        rounds: int | None,
         meter: _SimulatorCallMeter,
-        on_round: Callable[[int, Any], None] | None = None,
     ):
         if method == "SFMPE":
             return self._fit_sfmpe(
-                task_name, task, observation, budget, meter, on_round=on_round
+                task_name, task, observation, budget, cast(int, rounds), meter
             )
         if method == "SNPE_C":
             return self._fit_snpe_c(
-                task_name, task, observation, budget, meter, on_round=on_round
+                task_name, task, observation, budget, cast(int, rounds), meter
             )
         if method == "SMC_ABC":
-            return self._fit_smc_abc(
-                task, observation, budget, meter, on_round=on_round
-            )
+            return self._fit_smc_abc(task, observation, budget, 0, meter)
         raise ValueError(f"Unsupported method {method!r}.")
 
     def _evaluate_target(
@@ -674,18 +680,17 @@ class BenchmarkRunner:
         task_name: str,
         method: str,
         budget: int,
+        rounds: int | None,
         replicate: int,
         seed: int,
         observation: torch.Tensor,
         observation_scale: torch.Tensor,
-    ) -> list[tuple[dict[str, Any], torch.Tensor]]:
-        """Fit one target and score the resulting posterior.
+    ) -> tuple[dict[str, Any], torch.Tensor]:
+        """Fit one target for a fixed number of rounds and score it.
 
-        Returns one ``(row, posterior_samples)`` pair per evaluated round
-        when ``evaluate_rounds`` is enabled (the rounds axis); otherwise a
-        single final pair with ``round=None``. Scoring happens inside the
-        training loop callback because the estimators are mutated in place
-        in later rounds.
+        The simulation budget is split evenly across ``rounds`` rounds
+        (e.g. 1000 -> [1000], [500, 500], [334, 333, 333] for 1/2/3 rounds),
+        so every point on the rounds axis consumes the same total budget.
         """
         _set_seed(seed)
         task = self._make_task(
@@ -694,44 +699,14 @@ class BenchmarkRunner:
         )
         meter = _SimulatorCallMeter(task.simulator)
         inference_start = time.perf_counter()
-        scored: list[tuple[dict[str, Any], torch.Tensor]] = []
-
-        def on_round(round_number: int, sample_posterior) -> None:
-            if not self.evaluate_rounds:
-                return
-            inference_calls = meter.counts["setup"] + meter.counts["inference"]
-            if inference_calls > budget:
-                raise RuntimeError(
-                    f"{method} used {inference_calls} simulator draws, "
-                    f"exceeding budget {budget}."
-                )
-            scored.append(
-                self._score_posterior(
-                    task_name=task_name,
-                    method=method,
-                    budget=budget,
-                    replicate=replicate,
-                    seed=seed,
-                    task=task,
-                    observation=observation,
-                    observation_scale=observation_scale,
-                    meter=meter,
-                    sample_posterior=sample_posterior,
-                    resolved_sfmpe_method=None,  # filled below for SFMPE
-                    round_number=round_number,
-                    inference_seconds=time.perf_counter() - inference_start,
-                    inference_calls=inference_calls,
-                )
-            )
-
         fit_result = self._fit(
             task_name,
             method,
             task,
             observation,
             budget,
+            rounds,
             meter,
-            on_round=on_round,
         )
         resolved_sfmpe_method: str | None = None
         if isinstance(fit_result, tuple):
@@ -745,35 +720,22 @@ class BenchmarkRunner:
                 f"{method} used {inference_calls} simulator draws, "
                 f"exceeding budget {budget}."
             )
-        if not self.evaluate_rounds or not scored:
-            # Single final row: evaluate_rounds disabled, or a single-shot
-            # method (SMC-ABC) that never reported a round.
-            scored.append(
-                self._score_posterior(
-                    task_name=task_name,
-                    method=method,
-                    budget=budget,
-                    replicate=replicate,
-                    seed=seed,
-                    task=task,
-                    observation=observation,
-                    observation_scale=observation_scale,
-                    meter=meter,
-                    sample_posterior=sample_posterior,
-                    resolved_sfmpe_method=resolved_sfmpe_method,
-                    round_number=None,
-                    inference_seconds=inference_seconds,
-                    inference_calls=inference_calls,
-                )
-            )
-        else:
-            # Per-round rows were scored inside the loop; annotate the
-            # SFMPE proposal provenance (the resolved method is known only
-            # after the fit completes, but is identical for all rounds).
-            for row, _samples in scored:
-                if method == "SFMPE":
-                    row["sfmpe_proposal_method"] = resolved_sfmpe_method
-        return scored
+        return self._score_posterior(
+            task_name=task_name,
+            method=method,
+            budget=budget,
+            replicate=replicate,
+            seed=seed,
+            task=task,
+            observation=observation,
+            observation_scale=observation_scale,
+            meter=meter,
+            sample_posterior=sample_posterior,
+            resolved_sfmpe_method=resolved_sfmpe_method,
+            rounds_value=rounds,
+            inference_seconds=inference_seconds,
+            inference_calls=inference_calls,
+        )
 
     def _score_posterior(
         self,
@@ -789,7 +751,7 @@ class BenchmarkRunner:
         meter: _SimulatorCallMeter,
         sample_posterior,
         resolved_sfmpe_method: str | None,
-        round_number: int | None,
+        rounds_value: int | None,
         inference_seconds: float,
         inference_calls: int,
     ) -> tuple[dict[str, Any], torch.Tensor]:
@@ -853,7 +815,9 @@ class BenchmarkRunner:
             "method": method,
             "budget": budget,
             "replicate": replicate,
-            "round": round_number,
+            # Number of sequential rounds this model was trained with
+            # (None for single-shot SMC-ABC).
+            "rounds": rounds_value,
             "seed": seed,
             "inference_simulator_draws": inference_calls,
             "setup_simulator_draws": meter.counts["setup"],
@@ -878,6 +842,7 @@ class BenchmarkRunner:
         methods = list(self.config.get("methods", []))
         budgets = [int(budget) for budget in self.config.get("budgets", [])]
         replicates = int(self.config.get("replicates", 1))
+        configured_rounds = _normalized_rounds(self.config.get("rounds", 3))
         posterior_rows: dict[tuple, dict[str, Any]] = {}
         summaries: dict[tuple, dict[str, Any]] = {}
         # Resume: keep rows from earlier (partial) runs; per-target skip marks
@@ -888,7 +853,13 @@ class BenchmarkRunner:
         for row in self._load_jsonl("benchmark_summary.jsonl"):
             summaries[_summary_key(row)] = row
         completed_targets = {
-            (row["task"], row["method"], int(row["budget"]), int(row["replicate"]))
+            (
+                row["task"],
+                row["method"],
+                int(row["budget"]),
+                row.get("rounds"),
+                int(row["replicate"]),
+            )
             for row in posterior_rows.values()
         }
         if completed_targets:
@@ -923,86 +894,93 @@ class BenchmarkRunner:
             for method_index, method in enumerate(methods):
                 if stopped:
                     break
+                # SMC-ABC is single-shot: one experiment with rounds=None.
+                method_rounds = (
+                    [None] if method == "SMC_ABC" else configured_rounds
+                )
                 for budget_index, budget in enumerate(budgets):
                     if stopped:
                         break
-                    round_rows: dict[
-                        int | None, list[dict[str, Any]]
-                    ] = defaultdict(list)
-                    round_samples: dict[
-                        int | None, list[torch.Tensor]
-                    ] = defaultdict(list)
-                    evaluated = 0
-                    skipped = 0
-                    for replicate in range(replicates):
-                        if time_exceeded():
-                            stopped = True
+                    for rounds_value in method_rounds:
+                        if stopped:
                             break
-                        if (task_name, method, budget, replicate) in completed_targets:
-                            skipped += 1
-                            continue
-                        seed = (
-                            int(self.config.get("seed", 0))
-                            + task_index * 100_000
-                            + method_index * 10_000
-                            + budget_index * 1_000
-                            + replicate
-                        )
-                        scored = self._evaluate_target(
-                            task_name,
-                            method,
-                            budget,
-                            replicate,
-                            seed,
-                            target_observations[replicate],
-                            observation_scale,
-                        )
-                        evaluated += 1
-                        for row, samples in scored:
-                            round_number = row.get("round")
-                            round_rows[round_number].append(row)
-                            round_samples[round_number].append(samples)
+                        rows: list[dict[str, Any]] = []
+                        sample_sets: list[torch.Tensor] = []
+                        evaluated = 0
+                        skipped = 0
+                        for replicate in range(replicates):
+                            if time_exceeded():
+                                stopped = True
+                                break
+                            if (
+                                task_name,
+                                method,
+                                budget,
+                                rounds_value,
+                                replicate,
+                            ) in completed_targets:
+                                skipped += 1
+                                continue
+                            seed = (
+                                int(self.config.get("seed", 0))
+                                + task_index * 100_000
+                                + method_index * 10_000
+                                + budget_index * 1_000
+                                + replicate
+                            )
+                            row, samples = self._evaluate_target(
+                                task_name,
+                                method,
+                                budget,
+                                rounds_value,
+                                replicate,
+                                seed,
+                                target_observations[replicate],
+                                observation_scale,
+                            )
+                            evaluated += 1
+                            rows.append(row)
+                            sample_sets.append(samples)
                             posterior_rows[_target_key(row)] = row
-                        self._write_jsonl(
-                            "target_metrics.jsonl",
-                            list(posterior_rows.values()),
-                        )
-                        for row, _samples in scored:
+                            self._write_jsonl(
+                                "target_metrics.jsonl",
+                                list(posterior_rows.values()),
+                            )
                             print(
                                 f"{task_name} {method} budget={budget} "
+                                f"rounds={rounds_value} "
                                 f"target={replicate + 1}/{replicates} "
-                                f"round={row.get('round')} "
                                 f"simulations={row['inference_simulator_draws']}"
                             )
 
-                    if evaluated == 0:
-                        continue
-                    if skipped:
-                        # Mixed fresh/skipped replicates cannot be aggregated:
-                        # calibration metrics need posterior samples that are
-                        # not stored on disk.
-                        print(
-                            f"Skipped aggregation for {task_name} {method} "
-                            f"budget={budget}: {evaluated} fresh + {skipped} "
-                            "resumed replicates. Keep replicate counts fixed "
-                            "per output directory."
-                        )
-                        continue
-                    for round_number, rows in round_rows.items():
+                        if evaluated == 0:
+                            continue
+                        if skipped:
+                            # Mixed fresh/skipped replicates cannot be
+                            # aggregated: calibration metrics need posterior
+                            # samples that are not stored on disk.
+                            print(
+                                f"Skipped aggregation for {task_name} {method} "
+                                f"budget={budget} rounds={rounds_value}: "
+                                f"{evaluated} fresh + {skipped} resumed "
+                                "replicates. Keep replicate counts fixed per "
+                                "output directory."
+                            )
+                            continue
                         aggregate = self._aggregate(
                             task_name,
                             method,
                             budget,
                             rows,
-                            round_samples[round_number],
+                            sample_sets,
                             target_thetas,
-                            round_number=round_number,
+                            rounds_value=rounds_value,
                         )
                         summaries[_summary_key(aggregate)] = aggregate
-                    self._write_jsonl(
-                        "benchmark_summary.jsonl",
-                        list(summaries.values()),
-                    )
+                        self._write_jsonl(
+                            "benchmark_summary.jsonl",
+                            list(summaries.values()),
+                        )
 
         self._write_jsonl(
             "target_metrics.jsonl",
@@ -1038,14 +1016,14 @@ class BenchmarkRunner:
         rows: list[dict[str, Any]],
         sample_sets: list[torch.Tensor],
         target_thetas: torch.Tensor,
-        round_number: int | None = None,
+        rounds_value: int | None = None,
     ) -> dict[str, Any]:
         posterior_samples = torch.stack(sample_sets, dim=1)
         aggregate: dict[str, Any] = {
             "task": task_name,
             "method": method,
             "budget": budget,
-            "round": round_number,
+            "rounds": rounds_value,
             "replicates": len(rows),
             "mean_inference_simulator_draws": float(
                 np.mean([row["inference_simulator_draws"] for row in rows])

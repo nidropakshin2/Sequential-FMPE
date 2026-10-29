@@ -3,10 +3,10 @@ prior:
   beta_range: [0.5, 5.0]
 
 simulator:
-  S: 1000
-  I: 100
-  R: 0
-  T: 40
+  S: [1000, 2000]
+  I: [100, 200]
+  R: [0, 50]
+  T: [60, 90]
 
 summary:
   type: handmade

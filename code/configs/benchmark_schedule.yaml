@@ -12,8 +12,11 @@
 # Usage on Kaggle (list the exact commands with --list-shards):
 #   kagglex run --dir . --file notebooks/benchmark_kaggle_standalone.py \
 #     --include-data src pyproject.toml configs --gpu t4-2x \
-#     --env SFMPE_BENCHMARK_CONFIG=benchmark.yaml \
-#     --env SFMPE_BENCHMARK_SHARD=gaussian-sfmpe
+#     --env "SFMPE_BENCHMARK_CONFIG=benchmark.yaml SFMPE_BENCHMARK_SHARD=gaussian-sfmpe"
+#
+# NOTE: kagglex's --env is nargs="*" and repeated flags overwrite each other,
+# so both KEY=VAL pairs must follow a single --env (as above). With only
+# SFMPE_BENCHMARK_SHARD set, the shard runs this schedule's base_config.
 #
 # Usage locally (all shards share the output directory; the runner resumes):
 #   python notebooks/benchmark_kaggle_standalone.py --config configs/benchmark.yaml \
@@ -57,4 +60,14 @@ shards:
     methods: [SNPE_C]
   - name: stochvol-smc-abc
     tasks: [StochVol]
+    methods: [SMC_ABC]
+
+  - name: all-tasks-sfmpe
+    tasks: [Gaussian, SIR, StochVol]
+    methods: [SFMPE]
+  - name: all-tasks-snpe
+    tasks: [Gaussian, SIR, StochVol]
+    methods: [SNPE_C]
+  - name: all-tasks-smc-abc
+    tasks: [Gaussian, SIR, StochVol]
     methods: [SMC_ABC]

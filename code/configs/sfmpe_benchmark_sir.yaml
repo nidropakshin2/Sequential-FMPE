@@ -1,10 +1,10 @@
 # Benchmark-scoped SFMPE configuration for SIRTask.
 #
 # Referenced from benchmark YAML files via `sfmpe_configs`. Proposal values
-# follow the smoke-tested benchmark settings (benchmark_sfmpe.yaml); flow and
-# optimizer hyperparameters follow the task-specific sfmpe_sir.yaml. The
-# runner passes `device` explicitly, so `device: auto` only applies when this
-# file is used standalone.
+# follow the smoke-tested benchmark settings; flow and optimizer
+# hyperparameters follow the task-specific settings. The runner passes
+# `device` explicitly, so `device: auto` only applies when this file is used
+# standalone.
 device: auto
 
 flow:

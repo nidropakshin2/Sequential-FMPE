@@ -85,7 +85,7 @@ class SFMPE:
     Component selectors can be strings or mappings with ``type`` and ``params``.
 
     Example:
-        pipeline = SFMPE(task, "configs/sfmpe_sir.yaml")
+        pipeline = SFMPE(task, "configs/sfmpe_benchmark_sir.yaml")
         pipeline.run()
     """
 

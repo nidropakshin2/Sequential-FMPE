@@ -13,7 +13,7 @@
 seed: 2026
 device: auto
 tasks:
-  Gaussian: gaussian.yaml
+  Gaussian: benchmark_gaussian.yaml
   SIR: benchmark_sir.yaml
   StochVol: benchmark_stochvol.yaml
 sfmpe_configs:
@@ -27,12 +27,13 @@ methods:
   - SMC_ABC
 budgets: [100, 1000, 10000]
 replicates: 10
-rounds: 3
-posterior_samples: 256
+# Rounds axis: one experiment per value, each splitting the TOTAL budget
+# evenly across that many rounds (1000 -> [1000], [500, 500],
+# [334, 333, 333]). Metrics are keyed by `rounds`, so models trained with
+# 1/2/3 rounds are directly comparable at a fixed simulation budget.
+rounds: [1, 2, 3]
+posterior_samples: 1000
 output: ../results/benchmark
-# Score the model after every sequential round (rounds axis: metric vs
-# 1..rounds). Single-shot methods (SMC-ABC) keep round=null.
-evaluate_rounds: true
 # Graceful wall-clock guard: stop between targets after this many hours,
 # write partial results, and resume on the next launch (completed targets
 # are skipped). Keep below Kaggle's 12 h session limit.
@@ -59,9 +60,9 @@ sfmpe_proposal_methods: {}
 # benchmark has always trained shuffled). `device` is NOT configurable here:
 # it is pinned by the devices.nn policy.
 sfmpe_training:
-  epochs: 20             # max number of epochs per round
-  stop_after_epochs: 8   # patience: stop after N epochs without validation gain
-  batch_size: 64         # clamped to the per-round simulation count
+  epochs: 1000             # max number of epochs per round
+  stop_after_epochs: 20   # patience: stop after N epochs without validation gain
+  batch_size: 1000         # clamped to the per-round simulation count
   shuffle: true          # shuffle minibatches inside an epoch
   num_workers: 0         # DataLoader workers (0 = same process)
   show_every: null       # log train/validation loss every N epochs (null = off)
@@ -76,9 +77,9 @@ sfmpe_training:
 # `batch_size` from the merged block map to `max_num_epochs` and
 # `training_batch_size`.
 snpe_c_training:
-  max_num_epochs: 20      # cap on epochs (sbi default is effectively unlimited)
-  stop_after_epochs: 8    # patience on validation log-prob
-  training_batch_size: 64 # clamped to the per-round simulation count
+  max_num_epochs: 1000      # cap on epochs (sbi default is effectively unlimited)
+  stop_after_epochs: 20    # patience on validation log-prob
+  training_batch_size: 1000 # clamped to the per-round simulation count
   learning_rate: 0.0005   # Adam learning rate
   validation_fraction: 0.1
   num_atoms: 10           # atoms for the atomic classification loss
@@ -98,8 +99,8 @@ smc_abc:
   # to budget fractions by the runner; `num_simulations` is pinned to the
   # metered budget; `return_summary` stays False (benchmark needs a single
   # posterior-distribution object, not a dict).
-  particles: 100             # num_particles per population
-  initial_population: 500    # first-round population size
+  particles: 1000            # num_particles per population
+  initial_population: 5000   # first-round population size
   num_workers: 1             # SMCABC worker count for simulations
   epsilon_decay: 0.5         # multiplicative epsilon decay per population
   distance_based_decay: false
@@ -116,11 +117,11 @@ smc_abc:
   sass_expansion_degree: 1
 
 diagnostics:
-  ppc_samples: 128
+  ppc_samples: 1000
   sensitivity_enabled: true
   sensitivity_scale: 0.1
-  sensitivity_samples: 128
-  sbc_c2st: false
+  sensitivity_samples: 1000
+  sbc_c2st: true
 
 kaggle:
   # Consumed by `sfmpe-kaggle` (phase 2): one command submits this benchmark.

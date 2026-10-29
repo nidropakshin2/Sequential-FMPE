@@ -9,7 +9,7 @@ prior:
   m_scale: 1.0
 
 simulator:
-  T: 64
+  T: [120, 240]
 
 summary:
   type: handmade

@@ -27,6 +27,11 @@ from sfmpe.tasks.Gaussian import GaussianTask
 def test_round_budgets_sum_to_requested_total():
     assert _balanced_round_budgets(10, 3) == [4, 3, 3]
     assert _balanced_round_budgets(2, 4) == [1, 1]
+    # Rounds axis: the total budget is split evenly and always sums to 1000.
+    assert _balanced_round_budgets(1000, 1) == [1000]
+    assert _balanced_round_budgets(1000, 2) == [500, 500]
+    assert _balanced_round_budgets(1000, 3) == [334, 333, 333]
+    assert sum(_balanced_round_budgets(1000, 3)) == 1000
 
 
 def test_simulator_meter_counts_theta_vectors_not_batches():
@@ -258,6 +263,16 @@ def test_benchmark_configs_wire_pertask_sfmpe_and_devices():
     )
     assert kaggle_config["kaggle"]["max_hours"] <= 12
 
+    # Rounds axis: canonical configs declare a list of round counts; the old
+    # per-round-snapshot flag is gone.
+    canonical = yaml.safe_load(
+        (configs_dir / "benchmark.yaml").read_text(encoding="utf-8")
+    )
+    assert canonical["rounds"] == [1, 2, 3]
+    assert "evaluate_rounds" not in canonical
+    assert smoke["rounds"] == [1, 2]
+    assert "evaluate_rounds" not in smoke
+
 
 def test_runner_device_policy(tmp_path: Path):
     def make_config(devices_block):
@@ -333,6 +348,7 @@ def test_runner_resolves_pertask_sfmpe_config_paths(tmp_path: Path):
         yaml.safe_dump(
             {
                 "sfmpe_configs": {"StochVol": "stochvol_sfmpe.yaml"},
+                "sfmpe_config": "shared_sfmpe.yaml",
             }
         ),
         encoding="utf-8",
@@ -340,18 +356,19 @@ def test_runner_resolves_pertask_sfmpe_config_paths(tmp_path: Path):
     runner = BenchmarkRunner(config_path)
 
     assert runner._sfmpe_config_path("StochVol") == stochvol.resolve()
-    # Tasks absent from the mapping fall back to the shared default.
-    assert (
-        runner._sfmpe_config_path("SIR") == (tmp_path / "benchmark_sfmpe.yaml").resolve()
-    )
+    # Tasks absent from the mapping use the explicitly configured shared file.
+    assert runner._sfmpe_config_path("SIR") == shared.resolve()
 
+    # No implicit default: without sfmpe_configs/sfmpe_config this errors.
     no_mapping_path = tmp_path / "no_mapping.yaml"
     no_mapping_path.write_text(yaml.safe_dump({}), encoding="utf-8")
     runner = BenchmarkRunner(no_mapping_path)
-    assert (
+    try:
         runner._sfmpe_config_path("Gaussian")
-        == (tmp_path / "benchmark_sfmpe.yaml").resolve()
-    )
+    except ValueError as error:
+        assert "sfmpe_configs" in str(error)
+    else:
+        raise AssertionError("missing SFMPE config must raise")
 
 
 def test_benchmark_runner_allows_writable_output_override(tmp_path: Path):
@@ -378,7 +395,7 @@ def test_smc_abc_uses_cpu_task_even_when_benchmark_device_is_cuda(
         yaml.safe_dump(
             {
                 "device": "cpu",
-                "tasks": {"Gaussian": str(code_dir / "configs" / "gaussian.yaml")},
+                "tasks": {"Gaussian": str(code_dir / "configs" / "benchmark_gaussian.yaml")},
                 "posterior_samples": 8,
                 "diagnostics": {
                     "ppc_samples": 2,
@@ -402,21 +419,21 @@ def test_smc_abc_uses_cpu_task_even_when_benchmark_device_is_cuda(
 
     monkeypatch.setattr(runner, "_fit", fake_fit)
     observation = torch.tensor([0.2, -0.1])
-    scored = runner._evaluate_target(
+    row, samples = runner._evaluate_target(
         task_name="Gaussian",
         method="SMC_ABC",
         budget=40,
+        rounds=None,
         replicate=0,
         seed=1,
         observation=observation,
         observation_scale=torch.ones(2),
     )
-    row, samples = scored[-1]
 
     assert observed_task_devices == ["cpu"]
     assert samples.device.type == "cpu"
     assert row["inference_simulator_draws"] == 0
-    assert row["round"] is None
+    assert row["rounds"] is None
 
 
 def test_sfmpe_device_override_matches_benchmark_device(tmp_path: Path):
@@ -533,6 +550,7 @@ def test_snpe_c_prior_on_nn_device_with_cpu_sim_outputs(monkeypatch):
         task,
         observation=torch.zeros(2),
         budget=4,
+        rounds=1,
         meter=meter,
     )
 
@@ -625,12 +643,11 @@ def test_sfmpe_training_block_full_option_wiring(tmp_path: Path, monkeypatch):
     meter = SimpleNamespace(counts={"setup": 2}, set_phase=lambda _p: None)
 
     sample_posterior, method = BenchmarkRunner._fit_sfmpe(
-        runner, "Gaussian", task, torch.zeros(2), budget=10, meter=meter
+        runner, "Gaussian", task, torch.zeros(2), budget=10, rounds=3, meter=meter
     )
 
     assert method == "Truncated"
     assert observed_pipeline_devices == ["cpu"]
-    # remaining budget = 10 - 2 setup sims, split over 3 rounds: [3, 3, 2]
     # remaining budget = 10 - 2 setup sims, split over 3 rounds: [3, 3, 2];
     # every round trains cumulatively on all stored rounds so far
     assert [call["rounds"] for call in observed_calls] == [
@@ -702,7 +719,7 @@ def test_sfmpe_training_defaults_and_optional_checkpoint(monkeypatch):
     meter = SimpleNamespace(counts={"setup": 0}, set_phase=lambda _p: None)
 
     BenchmarkRunner._fit_sfmpe(
-        runner, "Gaussian", task, torch.zeros(2), budget=6, meter=meter
+        runner, "Gaussian", task, torch.zeros(2), budget=6, rounds=1, meter=meter
     )
 
     assert len(observed_calls) == 1
@@ -764,6 +781,7 @@ def test_sfmpe_clean_truncated_without_quantile_fails(monkeypatch):
             SimpleNamespace(device="cpu"),
             torch.zeros(2),
             budget=6,
+            rounds=1,
             meter=meter,
         )
     except ValueError as error:
@@ -836,7 +854,7 @@ def test_snpe_c_training_block_full_option_wiring(monkeypatch):
     meter = SimpleNamespace(set_phase=lambda _p: None)
 
     sample_posterior = BenchmarkRunner._fit_snpe_c(
-        runner, "Gaussian", task, torch.zeros(2), budget=8, meter=meter
+        runner, "Gaussian", task, torch.zeros(2), budget=8, rounds=1, meter=meter
     )
 
     assert callable(sample_posterior)
@@ -908,7 +926,7 @@ def test_snpe_c_legacy_training_block_mapping(monkeypatch):
     meter = SimpleNamespace(set_phase=lambda _p: None)
 
     BenchmarkRunner._fit_snpe_c(
-        runner, "Gaussian", task, torch.zeros(2), budget=8, meter=meter
+        runner, "Gaussian", task, torch.zeros(2), budget=8, rounds=1, meter=meter
     )
 
     assert len(observed_train) == 1
@@ -1019,7 +1037,7 @@ def test_smc_abc_full_option_wiring(monkeypatch):
     meter = SimpleNamespace(set_phase=lambda _p: None)
 
     sample_posterior = BenchmarkRunner._fit_smc_abc(
-        runner, task, torch.zeros(2), budget=1000, meter=meter
+        runner, task, torch.zeros(2), budget=1000, rounds=None, meter=meter
     )
 
     assert observed_worker_counts == [3]
@@ -1066,14 +1084,16 @@ def test_gaussian_benchmark_smoke_runs_all_methods_with_budget(tmp_path: Path):
     config = {
         "seed": 12,
         "device": "cpu",
-        "tasks": {"Gaussian": str(code_dir / "configs" / "gaussian.yaml")},
+        "tasks": {"Gaussian": str(code_dir / "configs" / "benchmark_gaussian.yaml")},
         "methods": ["SFMPE", "SNPE_C", "SMC_ABC"],
         "budgets": [40],
         "replicates": 4,
         "rounds": 2,
         "posterior_samples": 8,
         "output": str(tmp_path / "benchmark-results"),
-        "sfmpe_config": str(code_dir / "configs" / "benchmark_sfmpe.yaml"),
+        "sfmpe_configs": {
+            "Gaussian": str(code_dir / "configs" / "sfmpe_benchmark_gaussian.yaml"),
+        },
         "training": {
             "epochs": 1,
             "stop_after_epochs": 1,
@@ -1211,13 +1231,13 @@ def test_config_env_var_resolution(tmp_path: Path):
         raise AssertionError("missing env config must raise")
 
 
-def _fake_scored_row(method: str, round_number: int | None) -> dict:
+def _fake_scored_row(method: str, rounds: int | None) -> dict:
     return {
         "task": "Gaussian",
         "method": method,
         "budget": 10,
         "replicate": 0,
-        "round": round_number,
+        "rounds": rounds,
         "seed": 0,
         "inference_simulator_draws": 10,
         "setup_simulator_draws": 0,
@@ -1227,27 +1247,27 @@ def _fake_scored_row(method: str, round_number: int | None) -> dict:
         "inference_seconds": 0.1,
         "posterior_sampling_seconds": 0.01,
         "metrics": {
-            "mean_error": float(1.0 / (round_number or 1)),
-            "mmd_rbf": float(1.0 / (round_number or 1)),
+            "mean_error": float(1.0 / (rounds or 1)),
+            "mmd_rbf": float(1.0 / (rounds or 1)),
         },
     }
 
 
-def test_rounds_axis_evaluation_emits_one_row_per_round(tmp_path: Path, monkeypatch):
-    """evaluate_rounds: sequential methods report a row per round, SMC-ABC a
-    single row with round=None."""
+def test_rounds_axis_runs_one_experiment_per_rounds_value(tmp_path: Path, monkeypatch):
+    """rounds: [1, 2] runs an independent experiment per value (same total
+    budget, split into that many rounds); SMC-ABC runs once with rounds=None."""
     code_dir = Path(__file__).resolve().parents[1]
     config_path = tmp_path / "benchmark.yaml"
     config_path.write_text(
         yaml.safe_dump(
             {
                 "device": "cpu",
-                "tasks": {"Gaussian": str(code_dir / "configs" / "gaussian.yaml")},
+                "tasks": {"Gaussian": str(code_dir / "configs" / "benchmark_gaussian.yaml")},
                 "methods": ["SFMPE", "SMC_ABC"],
                 "budgets": [10],
                 "replicates": 2,
+                "rounds": [1, 2],
                 "posterior_samples": 8,
-                "evaluate_rounds": True,
                 "diagnostics": {
                     "ppc_samples": 2,
                     "sensitivity_enabled": False,
@@ -1259,20 +1279,29 @@ def test_rounds_axis_evaluation_emits_one_row_per_round(tmp_path: Path, monkeypa
         encoding="utf-8",
     )
     runner = BenchmarkRunner(config_path)
+    evaluated: list[tuple] = []
 
-    def fake_evaluate(task_name, method, budget, replicate, seed, observation, scale):
-        rounds = [1, 2] if method == "SFMPE" else [None]
-        scored = []
-        for round_number in rounds:
-            row = _fake_scored_row(method, round_number)
-            row["replicate"] = replicate
-            scored.append((row, torch.randn(8, 2)))
-        return scored
+    def fake_evaluate(
+        task_name, method, budget, rounds, replicate, seed, observation, scale
+    ):
+        evaluated.append((method, rounds, replicate))
+        row = _fake_scored_row(method, rounds)
+        row["replicate"] = replicate
+        return row, torch.randn(8, 2)
 
     monkeypatch.setattr(runner, "_evaluate_target", fake_evaluate)
     summaries = runner.run()
 
-    keys = {(summary["method"], summary["round"]) for summary in summaries}
+    # SFMPE evaluated for rounds=1 and rounds=2, SMC-ABC once (rounds=None).
+    assert evaluated == [
+        ("SFMPE", 1, 0),
+        ("SFMPE", 1, 1),
+        ("SFMPE", 2, 0),
+        ("SFMPE", 2, 1),
+        ("SMC_ABC", None, 0),
+        ("SMC_ABC", None, 1),
+    ]
+    keys = {(summary["method"], summary["rounds"]) for summary in summaries}
     assert keys == {("SFMPE", 1), ("SFMPE", 2), ("SMC_ABC", None)}
 
     target_rows = [
@@ -1282,19 +1311,19 @@ def test_rounds_axis_evaluation_emits_one_row_per_round(tmp_path: Path, monkeypa
         .splitlines()
         if line.strip()
     ]
-    assert {(row["method"], row["round"]) for row in target_rows} == {
+    assert {(row["method"], row["rounds"]) for row in target_rows} == {
         ("SFMPE", 1),
         ("SFMPE", 2),
         ("SMC_ABC", None),
     }
-    assert len(target_rows) == 2 * 2 + 2 * 1  # 2 replicates per method/round
+    assert len(target_rows) == 2 * 2 + 2 * 1  # 2 replicates per method/rounds
 
     # Resume: a re-run with the same output directory evaluates nothing.
     calls: list[tuple] = []
 
     def tracking_evaluate(*args, **kwargs):
         calls.append(args)
-        return []
+        return {}
 
     resumed = BenchmarkRunner(config_path)
     monkeypatch.setattr(resumed, "_evaluate_target", tracking_evaluate)
@@ -1313,7 +1342,7 @@ def test_overrides_select_shards_and_time_limit(tmp_path: Path, monkeypatch):
             {
                 "device": "cpu",
                 "tasks": {
-                    "Gaussian": str(code_dir / "configs" / "gaussian.yaml"),
+                    "Gaussian": str(code_dir / "configs" / "benchmark_gaussian.yaml"),
                     "SIR": str(code_dir / "configs" / "benchmark_sir.yaml"),
                 },
                 "methods": ["SFMPE", "SNPE_C", "SMC_ABC"],
@@ -1344,20 +1373,24 @@ def test_overrides_select_shards_and_time_limit(tmp_path: Path, monkeypatch):
 
     evaluated: list[tuple] = []
 
-    def fake_evaluate(task_name, method, budget, replicate, seed, observation, scale):
-        evaluated.append((task_name, method, budget, replicate))
-        row = _fake_scored_row(method, None)
+    def fake_evaluate(
+        task_name, method, budget, rounds, replicate, seed, observation, scale
+    ):
+        evaluated.append((task_name, method, budget, rounds, replicate))
+        row = _fake_scored_row(method, rounds)
         row["replicate"] = replicate
-        return [(row, torch.randn(8, 2))]
+        return row, torch.randn(8, 2)
 
     monkeypatch.setattr(runner, "_evaluate_target", fake_evaluate)
     summaries = runner.run()
+    # Default `rounds` (3) is a single experiment when it is an int.
     assert evaluated == [
-        ("Gaussian", "SNPE_C", 20, 0),
-        ("Gaussian", "SNPE_C", 20, 1),
+        ("Gaussian", "SNPE_C", 20, 3, 0),
+        ("Gaussian", "SNPE_C", 20, 3, 1),
     ]
     assert len(summaries) == 1
     assert summaries[0]["method"] == "SNPE_C"
+    assert summaries[0]["rounds"] == 3
 
     # Unknown task override fails loudly.
     try:
@@ -1376,7 +1409,7 @@ def test_overrides_select_shards_and_time_limit(tmp_path: Path, monkeypatch):
     monkeypatch.setattr(
         limited,
         "_evaluate_target",
-        lambda *args, **kwargs: limited_calls.append(args) or [],
+        lambda *args, **kwargs: limited_calls.append(args) or {},
     )
     assert limited.run() == []
     assert limited_calls == []
@@ -1392,14 +1425,14 @@ def test_merge_shard_results_dedupes_and_exports(tmp_path: Path):
             "method": "SFMPE",
             "budget": 10,
             "replicate": 0,
-            "round": 1,
+            "rounds": 1,
             "metrics": {"mean_error": mean_error},
         }
         summary = {
             "task": task,
             "method": "SFMPE",
             "budget": 10,
-            "round": 1,
+            "rounds": 1,
             "replicates": 1,
             "mean_error": mean_error,
         }
@@ -1426,11 +1459,48 @@ def test_merge_shard_results_dedupes_and_exports(tmp_path: Path):
     assert {row["task"] for row in summaries} == {"Gaussian", "SIR"}
     report = (merged / "benchmark_report.md").read_text(encoding="utf-8")
     assert "Gaussian" in report and "SIR" in report
-    assert "Round" in report  # rounds axis present in tables
+    assert "Rounds" in report  # rounds axis present in tables
     assert (merged / "figures" / "Gaussian_rounds_mean_error.png").is_file()
 
 
-def test_schedule_file_matches_benchmark_wiring(tmp_path: Path):
+def test_resolve_benchmark_config_priority(tmp_path: Path):
+    """Config resolution: --config > env > schedule base_config > smoke.
+
+    Regression: a shard env without SFMPE_BENCHMARK_CONFIG must NOT fall back
+    to the smoke profile; it runs the schedule's base_config.
+    """
+    module = _load_standalone_module()
+    configs_dir = tmp_path / "configs"
+    configs_dir.mkdir()
+    full = configs_dir / "benchmark.yaml"
+    full.write_text("seed: 1\n", encoding="utf-8")
+    smoke = configs_dir / "benchmark_kaggle_smoke.yaml"
+    smoke.write_text("seed: 2\n", encoding="utf-8")
+    schedule = {"base_config": "benchmark.yaml", "shards": []}
+
+    # Shard only (no --config, no env): schedule base_config wins over smoke.
+    assert (
+        module.resolve_benchmark_config(None, None, schedule, tmp_path)
+        == full.resolve()
+    )
+    # Explicit --config wins over the schedule.
+    assert (
+        module.resolve_benchmark_config(str(smoke), None, schedule, tmp_path)
+        == smoke.resolve()
+    )
+    # Env wins over the schedule.
+    assert (
+        module.resolve_benchmark_config(None, "benchmark_kaggle_smoke.yaml", schedule, tmp_path)
+        == smoke.resolve()
+    )
+    # No shard at all: the smoke profile is the default.
+    assert (
+        module.resolve_benchmark_config(None, None, None, tmp_path)
+        == smoke.resolve()
+    )
+
+
+def test_schedule_file_matches_benchmark_wiring(tmp_path: Path, capsys):
     """The canonical schedule covers every task x method pair and the
     resolved overlays are valid config overrides."""
     module = _load_standalone_module()
@@ -1465,23 +1535,34 @@ def test_schedule_file_matches_benchmark_wiring(tmp_path: Path):
     # Schedule resolution works from the bundle root (configs/ fallback).
     assert module.find_schedule_path(None, code_dir) == schedule_path.resolve()
 
+    # Printed kagglex commands must use ONE --env (repeated --env flags
+    # overwrite each other in kagglex's argparse).
+    module.print_schedule(schedule, schedule_path)
+    printed = capsys.readouterr().out
+    commands = [
+        line for line in printed.splitlines() if "kagglex run" in line
+    ]
+    assert len(commands) == len(schedule["shards"])
+    assert all(line.count("--env") == 1 for line in commands)
+    assert all("SFMPE_BENCHMARK_SHARD=" in line for line in commands)
+
 
 def test_rounds_axis_in_markdown_report(tmp_path: Path):
-    """Markdown tables gain a Round column and rounds figures are produced."""
+    """Markdown tables gain a Rounds column and rounds figures are produced."""
     from sfmpe.benchmark.report import export_benchmark_results
 
     results = tmp_path / "results"
     results.mkdir()
     summaries = []
-    for round_number in (1, 2):
+    for rounds_value in (1, 2):
         summaries.append(
             {
                 "task": "Gaussian",
                 "method": "SFMPE",
                 "budget": 10,
-                "round": round_number,
+                "rounds": rounds_value,
                 "replicates": 2,
-                "mean_error": 1.0 / round_number,
+                "mean_error": 1.0 / rounds_value,
                 "std_mean_error": 0.1,
             }
         )
@@ -1490,7 +1571,7 @@ def test_rounds_axis_in_markdown_report(tmp_path: Path):
             "task": "Gaussian",
             "method": "SMC_ABC",
             "budget": 10,
-            "round": None,
+            "rounds": None,
             "replicates": 2,
             "mean_error": 0.5,
             "std_mean_error": 0.2,
@@ -1501,13 +1582,14 @@ def test_rounds_axis_in_markdown_report(tmp_path: Path):
         encoding="utf-8",
     )
     (results / "target_metrics.jsonl").write_text(
-        json.dumps({"task": "Gaussian", "budget": 10, "round": 1}) + "\n",
+        json.dumps({"task": "Gaussian", "budget": 10, "rounds": 1}) + "\n",
         encoding="utf-8",
     )
 
     export_benchmark_results(results)
     report = (results / "benchmark_report.md").read_text(encoding="utf-8")
-    assert "| Budget | Round |" in report
+    assert "| Budget | Rounds |" in report
     assert "| 10.0 | 1 |" in report
+    assert "| 10.0 | 2 |" in report
     assert "| 10.0 | - |" in report  # SMC-ABC has no rounds
     assert (results / "figures" / "Gaussian_rounds_mean_error.png").is_file()
