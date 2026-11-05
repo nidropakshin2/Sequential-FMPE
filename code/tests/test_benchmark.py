@@ -8,6 +8,7 @@ import types
 from pathlib import Path
 from types import SimpleNamespace
 
+import numpy as np
 import torch
 import yaml
 
@@ -1066,6 +1067,173 @@ def test_smc_abc_full_option_wiring(monkeypatch):
     assert samples.shape == (5, 2)
 
 
+def _sbi021_buggy_get_kde(*args, **kwargs):
+    """Copy of sbi 0.21 get_kde: its bandwidth cross-validation zoom fits a
+    GridSearchCV. (Only used as a source-controllable stub.)"""
+    raise AssertionError("not callable in these tests")
+
+
+def _new_sbi_get_kde(*args, **kwargs):
+    """Copy of current sbi's get_kde: bandwidth selection uses a KFold loop
+    instead of a keyword-search grid. (Only used as a stub with controllable
+    source, without the 0.21 marker keyword in it.)"""
+    raise AssertionError("not callable in these tests")
+
+
+def _fake_sbi_kde_modules(monkeypatch, original_get_kde):
+    """Install a fake sbi package shaped like sbi 0.21, with ``get_kde``
+    aliases in the namespaces sbi's own modules import it from."""
+    fake_sbi = types.ModuleType("sbi")
+    fake_utils = types.ModuleType("sbi.utils")
+    fake_kde_module = types.ModuleType("sbi.utils.kde")
+    fake_smcabc = types.ModuleType("sbi.inference.abc.smcabc")
+
+    fake_sbi.utils = fake_utils
+    fake_utils.kde = fake_kde_module
+    fake_kde_module.get_kde = original_get_kde
+    fake_utils.get_kde = original_get_kde
+    fake_smcabc.get_kde = original_get_kde
+
+    for key, module in [
+        ("sbi", fake_sbi),
+        ("sbi.utils", fake_utils),
+        ("sbi.utils.kde", fake_kde_module),
+        ("sbi.inference.abc.smcabc", fake_smcabc),
+    ]:
+        monkeypatch.setitem(sys.modules, key, module)
+    return fake_utils, fake_kde_module, fake_smcabc
+
+
+def test_sbi_kde_fix_installer_patches_aliases_and_is_idempotent(monkeypatch):
+    """The installer replaces the buggy band-width cross-validation in
+    sbi.utils.kde and rebinds every alias, and repeating it is a no-op."""
+    fake_utils, fake_kde_module, fake_smcabc = _fake_sbi_kde_modules(
+        monkeypatch, _sbi021_buggy_get_kde
+    )
+
+    from sfmpe.benchmark import sbi_kde_fix
+    from sfmpe.benchmark.sbi_kde_fix import install_sbi_kde_fix
+
+    assert install_sbi_kde_fix() is True
+    assert fake_kde_module.get_kde is sbi_kde_fix.fixed_get_kde
+    # Rebinding reaches every sbi namespace that already imported get_kde.
+    assert fake_utils.get_kde is sbi_kde_fix.fixed_get_kde
+    assert fake_smcabc.get_kde is sbi_kde_fix.fixed_get_kde
+
+    # Already patched (or sbi missing): nothing further to do.
+    assert install_sbi_kde_fix() is False
+
+
+def test_sbi_kde_fix_installer_skips_sbi_without_gridsearch_bandwidth(monkeypatch):
+    """A rewritten bandwidth selection (current sbi) must be left untouched."""
+    fresh_utils, fresh_kde_module, _ = _fake_sbi_kde_modules(
+        monkeypatch, _new_sbi_get_kde
+    )
+
+    from sfmpe.benchmark.sbi_kde_fix import install_sbi_kde_fix
+
+    assert install_sbi_kde_fix() is False
+    assert fresh_kde_module.get_kde is _new_sbi_get_kde
+    assert fresh_utils.get_kde is _new_sbi_get_kde
+
+
+def test_fixed_kde_cv_keeps_bandwidth_grids_positive_and_sampleable(monkeypatch):
+    """Regression for the sbi 0.21 boundary-zoom bug: zooms must be built
+    from bandwidth values so no candidate can become negative, and the
+    resulting KDE must fit and sample."""
+    from sfmpe.benchmark import sbi_kde_fix
+
+    recorded_ranges: list[np.ndarray] = []
+    script = [
+        # Interior best (rank 2 sits at index 3): zoom into [best, second].
+        {"best_index": 2, "score": 3.0, "ranks": [4, 3, 1, 2, 5, 6, 7, 8, 9, 10]},
+        # Lower-boundary best: the historic bug swapped index for bandwidth
+        # here and pushed the next range below zero.
+        {"best_index": 0, "score": 3.0004},
+    ]
+
+    class FakeGrid:
+        def __init__(self, bandwidth_range, cv):
+            recorded_ranges.append(np.asarray(bandwidth_range, dtype=float))
+            self._range = recorded_ranges[-1]
+            self._step = script[len(recorded_ranges) - 1]
+            self.cv = cv
+
+        def fit(self, samples):
+            self.best_index_ = self._step["best_index"]
+            self.best_score_ = self._step["score"]
+            self.best_params_ = {"bandwidth": float(self._range[self.best_index_])}
+            if "ranks" in self._step:
+                self.cv_results_ = {"rank_test_score": self._step["ranks"]}
+
+    monkeypatch.setattr(
+        sbi_kde_fix,
+        "_cv_grid_search",
+        lambda _samples, bandwidth_range, _cv: FakeGrid(bandwidth_range, _cv),
+    )
+
+    torch.manual_seed(0)
+    kde = sbi_kde_fix.fixed_get_kde(torch.randn(40, 2), bandwidth="cv")
+
+    # Both zoom iterations searched strictly positive, strictly ordered grids.
+    assert len(recorded_ranges) == 2
+    for grid_range in recorded_ranges:
+        assert grid_range.shape == (10,)
+        assert np.all(grid_range > 0)
+        assert np.all(np.diff(grid_range) > 0)
+
+    # The final bandwidth is positive and comes from the last searched grid,
+    # and the wrapped sbi KDEWrapper samples from the fitted KernelDensity.
+    assert isinstance(kde.kde.bandwidth, float)
+    assert kde.kde.bandwidth == float(recorded_ranges[-1][0]) > 0
+    drawn = kde.sample(6)
+    assert drawn.shape == (6, 2)
+    assert torch.isfinite(drawn).all()
+
+
+def test_fit_smc_abc_installs_sbi_kde_fix(monkeypatch):
+    """The runner installs the KDE fix before sbi's SMCABC builds a KDE."""
+    observed_installs: list[bool] = []
+
+    def spy_install():
+        observed_installs.append(True)
+        return False
+
+    import sfmpe.benchmark.sbi_kde_fix as sbi_kde_fix_module
+
+    monkeypatch.setattr(sbi_kde_fix_module, "install_sbi_kde_fix", spy_install)
+
+    class FakeSMCDistribution:
+        def sample(self, shape):
+            return torch.zeros(*shape, 2)
+
+    class FakeSMCABC:
+        def __init__(self, simulator, prior, num_workers=1, **kwargs):
+            pass
+
+        def __call__(self, x_o, num_particles, num_initial_pop, num_simulations, **kwargs):
+            return FakeSMCDistribution()
+
+    inference_module = types.ModuleType("sbi.inference")
+    inference_module.SMCABC = FakeSMCABC
+    monkeypatch.setitem(sys.modules, "sbi.inference", inference_module)
+
+    task = SimpleNamespace(prior=torch.distributions.Normal(torch.zeros(2), torch.ones(2)))
+    runner = _FitRunner(
+        config={"smc_abc": {"particles": 20, "kde": True, "kde_kwargs": {}}},
+        _make_simulator_callable=lambda _task: lambda theta: theta,
+    )
+    meter = SimpleNamespace(set_phase=lambda _p: None)
+
+    posterior = BenchmarkRunner._fit_smc_abc(
+        runner, task, torch.zeros(2), budget=100, rounds=None, meter=meter
+    )
+
+    # Local function-level import: the patched symbol must actually be used.
+    assert observed_installs == [True]
+    assert posterior(torch.zeros(2), 4).shape == (4, 2)
+
+
 def test_kaggle_notebook_code_cells_are_valid_python():
     notebook_path = (
         Path(__file__).resolve().parents[1]
@@ -1330,6 +1498,215 @@ def test_rounds_axis_runs_one_experiment_per_rounds_value(tmp_path: Path, monkey
     summaries_again = resumed.run()
     assert calls == []
     assert len(summaries_again) == 3
+
+
+def _axis_config(tmp_path: Path, output_name: str = "results") -> Path:
+    code_dir = Path(__file__).resolve().parents[1]
+    config_path = tmp_path / "benchmark.yaml"
+    config_path.write_text(
+        yaml.safe_dump(
+            {
+                "device": "cpu",
+                "tasks": {"Gaussian": str(code_dir / "configs" / "benchmark_gaussian.yaml")},
+                "methods": ["SFMPE"],
+                "budgets": [10],
+                "replicates": 2,
+                "rounds": 1,
+                "posterior_samples": 8,
+                "diagnostics": {
+                    "ppc_samples": 2,
+                    "sensitivity_enabled": False,
+                    "sbc_c2st": False,
+                },
+                "output": str(tmp_path / output_name),
+            }
+        ),
+        encoding="utf-8",
+    )
+    return config_path
+
+
+def test_time_limit_stops_group_midway_defers_aggregation(
+    tmp_path: Path, monkeypatch, capsys
+):
+    """Regression for the crashed 11 h Kaggle run: the wall-clock guard
+    stopped a group partway (5/10 replicates) and the aggregator stacked 5
+    posterior-sample sets against 10 truth rows -> ValueError. The runner
+    must defer aggregation instead, keeping rows and samples on disk."""
+    import sfmpe.benchmark.runner as runner_module
+
+    config_path = _axis_config(tmp_path)
+    runner = BenchmarkRunner(
+        # The guard needs a deadline; the scripted clock below decides when
+        # it is exceeded, so any positive value works.
+        config_path,
+        overrides={"replicates": 3, "time_limit_hours": 0.1},
+    )
+    evaluations: list[int] = []
+
+    def fake_evaluate(
+        task_name, method, budget, rounds, replicate, seed, observation, scale
+    ):
+        evaluations.append(replicate)
+        row = _fake_scored_row(method, rounds)
+        row["replicate"] = replicate
+        return row, torch.randn(8, 2)
+
+    monkeypatch.setattr(runner, "_evaluate_target", fake_evaluate)
+    # First two calls: deadline setup and the first replicate check (0 ->
+    # deadline not exceeded); from the third call the fake clock has already
+    # passed the deadline, so the guard stops after the first replicate.
+    ticks = {"count": 0}
+
+    def scripted_clock():
+        ticks["count"] += 1
+        return 0.0 if ticks["count"] <= 2 else 1e9
+
+    monkeypatch.setattr(runner_module.time, "perf_counter", scripted_clock)
+
+    assert runner.run() == []
+    assert evaluations == [0]
+    printed = capsys.readouterr().out
+    assert "stopped with 1/3 replicates" in printed
+
+    sample_files = list(
+        (tmp_path / "results" / "posterior_samples").glob("*.pt")
+    )
+    assert len(sample_files) == 1
+    with sample_files[0].open("rb") as stream:
+        assert torch.load(stream, weights_only=True).shape == (8, 2)
+
+    target_rows = [
+        json.loads(line)
+        for line in (tmp_path / "results" / "target_metrics.jsonl")
+        .read_text(encoding="utf-8")
+        .splitlines()
+        if line.strip()
+    ]
+    assert len(target_rows) == 1
+    summary_rows = [
+        json.loads(line)
+        for line in (tmp_path / "results" / "benchmark_summary.jsonl")
+        .read_text(encoding="utf-8")
+        .splitlines()
+        if line.strip()
+    ]
+    assert summary_rows == []
+
+
+def test_resume_restores_stored_samples_and_completes_group(
+    tmp_path: Path, monkeypatch
+):
+    """A group stopped partway is completed on resume: the already evaluated
+    replicate is restored from its stored samples (no budget re-paid) and the
+    full group is aggregated."""
+    code_dir = Path(__file__).resolve().parents[1]
+    output = tmp_path / "results"
+    output.mkdir()
+    taken_over_row = _fake_scored_row("SFMPE", 1)
+    taken_over_row["budget"] = 10
+    taken_over_row["replicate"] = 0
+    (output / "target_metrics.jsonl").write_text(
+        json.dumps(taken_over_row) + "\n", encoding="utf-8"
+    )
+    samples_dir = output / "posterior_samples"
+    samples_dir.mkdir()
+    with (samples_dir / "Gaussian__SFMPE__10__1__0.pt").open("wb") as stream:
+        torch.save(torch.randn(8, 2), stream)
+    config_path = _axis_config(tmp_path)
+    runner = BenchmarkRunner(config_path, overrides={"replicates": 3})
+    evaluations: list[int] = []
+
+    def fake_evaluate(
+        task_name, method, budget, rounds, replicate, seed, observation, scale
+    ):
+        assert replicate != 0, "the finished replicate must not be re-evaluated"
+        evaluations.append(replicate)
+        row = _fake_scored_row(method, rounds)
+        row["replicate"] = replicate
+        return row, torch.randn(8, 2)
+
+    monkeypatch.setattr(runner, "_evaluate_target", fake_evaluate)
+    summaries = runner.run()
+
+    assert evaluations == [1, 2]
+    assert len(summaries) == 1
+    assert summaries[0]["replicates"] == 3
+    assert summaries[0]["rounds"] == 1
+
+
+def test_resume_re_evaluates_legacy_rows_without_samples(
+    tmp_path: Path, monkeypatch
+):
+    """Rows from an older runner version have no stored samples and no
+    summary; they are re-evaluated (the metrics row alone is not enough for
+    calibration) and the samples are stored this time."""
+    output = tmp_path / "results"
+    output.mkdir()
+    legacy_row = _fake_scored_row("SFMPE", 1)
+    legacy_row["replicate"] = 0
+    (output / "target_metrics.jsonl").write_text(
+        json.dumps(legacy_row) + "\n", encoding="utf-8"
+    )
+    config_path = _axis_config(tmp_path)
+    runner = BenchmarkRunner(config_path)
+    evaluations: list[int] = []
+
+    def fake_evaluate(
+        task_name, method, budget, rounds, replicate, seed, observation, scale
+    ):
+        evaluations.append(replicate)
+        row = _fake_scored_row(method, rounds)
+        row["replicate"] = replicate
+        return row, torch.randn(8, 2)
+
+    monkeypatch.setattr(runner, "_evaluate_target", fake_evaluate)
+    summaries = runner.run()
+
+    assert evaluations == [0, 1]
+    assert len(summaries) == 1
+    assert len(
+        list((output / "posterior_samples").glob("*.pt"))
+    ) == 2
+
+
+def test_resume_summarized_legacy_group_is_skipped(tmp_path: Path, monkeypatch):
+    """A complete group whose summary was written by an older runner (rows
+    predate stored samples) is left alone: no budget re-paid, no crash."""
+    output = tmp_path / "results"
+    output.mkdir()
+    rows = []
+    for replicate in range(2):
+        row = _fake_scored_row("SFMPE", 1)
+        row["replicate"] = replicate
+        rows.append(row)
+    (output / "target_metrics.jsonl").write_text(
+        "".join(json.dumps(row) + "\n" for row in rows), encoding="utf-8"
+    )
+    summary = {
+        "task": "Gaussian",
+        "method": "SFMPE",
+        "budget": 10,
+        "rounds": 1,
+        "replicates": 2,
+        "mean_error": 0.5,
+    }
+    (output / "benchmark_summary.jsonl").write_text(
+        json.dumps(summary) + "\n", encoding="utf-8"
+    )
+    config_path = _axis_config(tmp_path)
+    runner = BenchmarkRunner(config_path)
+    evaluations: list[int] = []
+
+    def tracking_evaluate(*args, **kwargs):
+        evaluations.append(args)
+        raise AssertionError("summarized groups must not be re-evaluated")
+
+    monkeypatch.setattr(runner, "_evaluate_target", tracking_evaluate)
+    summaries_again = runner.run()
+    assert evaluations == []
+    assert len(summaries_again) == 1
+    assert summaries_again[0]["mean_error"] == 0.5
 
 
 def test_overrides_select_shards_and_time_limit(tmp_path: Path, monkeypatch):

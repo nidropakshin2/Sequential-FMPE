@@ -44,7 +44,9 @@ The full benchmark is split across Kaggle sessions via
 also pin ``budgets``/``replicates``). Every shard writes results incrementally
 and skips completed targets on re-launch, so a run that hits the wall-clock
 limit can simply be submitted again. ``time_limit_hours`` in the config (or
-``--time-limit-hours``) stops cleanly between targets.
+``--time-limit-hours``) stops cleanly between targets, keeping rows, summaries,
+and the per-target posterior samples (``posterior_samples/*.pt``) needed to
+aggregate a finished group on the next launch.
 
     python benchmark_kaggle_standalone.py --list-shards
     python benchmark_kaggle_standalone.py --shard sir-snpe-c

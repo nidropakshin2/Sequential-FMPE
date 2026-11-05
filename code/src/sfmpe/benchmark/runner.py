@@ -5,6 +5,7 @@ import json
 import math
 import random
 import time
+import traceback
 from collections import defaultdict
 from collections.abc import Callable, Mapping
 from pathlib import Path
@@ -578,6 +579,17 @@ class BenchmarkRunner:
     ):
         from sbi.inference import SMCABC
 
+        # sbi 0.21 ships a broken KDE bandwidth cross-validation: at a grid
+        # boundary the zoom mixes the grid index into the bandwidth range and
+        # produces negative bandwidth candidates, so every KernelDensity fit
+        # fails (sklearn FitFailedWarning) and the selected bandwidth is
+        # degraded. Install the corrected get_kde before SMCABC can use it;
+        # the installer is idempotent and a no-op on sbi versions that
+        # already rewrote the bandwidth selection.
+        from sfmpe.benchmark.sbi_kde_fix import install_sbi_kde_fix
+
+        install_sbi_kde_fix()
+
         # Single-shot method: `rounds` is ignored and the runner records
         # rounds=None for its one evaluation row.
 
@@ -862,10 +874,20 @@ class BenchmarkRunner:
             )
             for row in posterior_rows.values()
         }
+        summarized_groups = {
+            (row["task"], row["method"], int(row["budget"]), row.get("rounds"))
+            for row in summaries.values()
+        }
         if completed_targets:
+            with_samples = sum(
+                1
+                for row in posterior_rows.values()
+                if self._samples_path(row).is_file()
+            )
             print(
                 f"Resuming: {len(completed_targets)} target(s) already recorded "
-                f"in {self.output_dir}"
+                f"in {self.output_dir}; {with_samples} with stored posterior "
+                "samples."
             )
 
         deadline = (
@@ -904,23 +926,34 @@ class BenchmarkRunner:
                     for rounds_value in method_rounds:
                         if stopped:
                             break
+                        group_key = (task_name, method, budget, rounds_value)
                         rows: list[dict[str, Any]] = []
                         sample_sets: list[torch.Tensor] = []
                         evaluated = 0
-                        skipped = 0
+                        restored = 0
+                        # Rows restored from an output directory written by
+                        # an older runner version may miss stored samples;
+                        # their group cannot be re-aggregated.
+                        samples_missing = False
                         for replicate in range(replicates):
                             if time_exceeded():
                                 stopped = True
                                 break
-                            if (
-                                task_name,
-                                method,
-                                budget,
-                                rounds_value,
-                                replicate,
-                            ) in completed_targets:
-                                skipped += 1
-                                continue
+                            key = group_key + (replicate,)
+                            prior_row = posterior_rows.get(key)
+                            if prior_row is not None:
+                                prior_samples = self._load_samples(prior_row)
+                                if (
+                                    prior_samples is not None
+                                    or group_key in summarized_groups
+                                ):
+                                    restored += 1
+                                    rows.append(prior_row)
+                                    if prior_samples is not None:
+                                        sample_sets.append(prior_samples)
+                                    else:
+                                        samples_missing = True
+                                    continue
                             seed = (
                                 int(self.config.get("seed", 0))
                                 + task_index * 100_000
@@ -928,6 +961,10 @@ class BenchmarkRunner:
                                 + budget_index * 1_000
                                 + replicate
                             )
+                            # Missing samples with no persisted group summary:
+                            # the metrics row alone is not enough for
+                            # calibration, so pay the budget again and store
+                            # the samples this time.
                             row, samples = self._evaluate_target(
                                 task_name,
                                 method,
@@ -942,6 +979,7 @@ class BenchmarkRunner:
                             rows.append(row)
                             sample_sets.append(samples)
                             posterior_rows[_target_key(row)] = row
+                            self._save_samples(row, samples)
                             self._write_jsonl(
                                 "target_metrics.jsonl",
                                 list(posterior_rows.values()),
@@ -953,29 +991,88 @@ class BenchmarkRunner:
                                 f"simulations={row['inference_simulator_draws']}"
                             )
 
-                        if evaluated == 0:
+                        if evaluated == 0 and restored == replicates:
+                            # Every replicate was recorded by an earlier run.
+                            # Re-aggregate only when the restored samples allow
+                            # it; otherwise the (already persisted) summary is
+                            # the final word for this group.
+                            if samples_missing:
+                                print(
+                                    f"{task_name} {method} budget={budget} "
+                                    f"rounds={rounds_value}: summary was "
+                                    "recorded by an earlier run; skipping "
+                                    "(rows predate stored posterior samples)."
+                                )
+                            else:
+                                aggregate = self._aggregate(
+                                    task_name,
+                                    method,
+                                    budget,
+                                    rows,
+                                    sample_sets,
+                                    target_thetas[
+                                        [int(row["replicate"]) for row in rows]
+                                    ],
+                                    rounds_value=rounds_value,
+                                )
+                                summaries[_summary_key(aggregate)] = aggregate
+                                self._write_jsonl(
+                                    "benchmark_summary.jsonl",
+                                    list(summaries.values()),
+                                )
                             continue
-                        if skipped:
-                            # Mixed fresh/skipped replicates cannot be
-                            # aggregated: calibration metrics need posterior
-                            # samples that are not stored on disk.
+                        if len(rows) < replicates:
+                            # The wall-clock guard or an earlier abort stopped
+                            # this group partway. Stacking a partial sample
+                            # stack against all truth thetas is invalid (the
+                            # time-limit stop after 5 of 10 replicates used to
+                            # crash the run), so defer aggregation to the run
+                            # that completes the group.
                             print(
-                                f"Skipped aggregation for {task_name} {method} "
-                                f"budget={budget} rounds={rounds_value}: "
-                                f"{evaluated} fresh + {skipped} resumed "
-                                "replicates. Keep replicate counts fixed per "
-                                "output directory."
+                                f"{task_name} {method} budget={budget} "
+                                f"rounds={rounds_value}: stopped with "
+                                f"{len(rows)}/{replicates} replicates; rows "
+                                "and samples are saved. Re-run the shard to "
+                                "resume; this group is aggregated once all "
+                                "replicates exist."
                             )
                             continue
-                        aggregate = self._aggregate(
-                            task_name,
-                            method,
-                            budget,
-                            rows,
-                            sample_sets,
-                            target_thetas,
-                            rounds_value=rounds_value,
-                        )
+                        if samples_missing:
+                            # Mixed legacy rows (no samples) and fresh rows:
+                            # the truth thetas for legacy rows cannot be
+                            # matched to samples, so no valid aggregation.
+                            print(
+                                f"Skipping aggregation for {task_name} "
+                                f"{method} budget={budget} "
+                                f"rounds={rounds_value}: {evaluated} fresh "
+                                "replicates cannot restore the samples of "
+                                f"{restored} resumed replicates. Use a fresh "
+                                "output directory for a complete aggregation."
+                            )
+                            continue
+                        try:
+                            aggregate = self._aggregate(
+                                task_name,
+                                method,
+                                budget,
+                                rows,
+                                sample_sets,
+                                target_thetas[
+                                    [int(row["replicate"]) for row in rows]
+                                ],
+                                rounds_value=rounds_value,
+                            )
+                        except Exception:
+                            # One bad group must not destroy the results of a
+                            # multi-hour session; the per-target rows and
+                            # samples stay on disk for debugging/re-runs.
+                            traceback.print_exc()
+                            print(
+                                f"Aggregate failed for {task_name} {method} "
+                                f"budget={budget} rounds={rounds_value}; "
+                                "continuing to the next group."
+                            )
+                            continue
                         summaries[_summary_key(aggregate)] = aggregate
                         self._write_jsonl(
                             "benchmark_summary.jsonl",
@@ -1007,6 +1104,41 @@ class BenchmarkRunner:
                 if line.strip():
                     rows.append(json.loads(line))
         return rows
+
+    def _samples_path(self, row: Mapping[str, Any]) -> Path:
+        """Where a target's posterior samples are stored for re-aggregation.
+
+        Calibration metrics (SBC/TARP) need the raw posterior samples of
+        every replicate in a group; without them a resumed group can never
+        be aggregated (this is exactly what crashed the 11 h Kaggle run:
+        the wall-clock guard stopped a group at 5/10 replicates and the
+        aggregator stacked 5 sample sets against 10 truth rows).
+        """
+        name = "__".join(
+            str(row.get(key))
+            for key in ("task", "method", "budget", "rounds", "replicate")
+        )
+        return self.output_dir / "posterior_samples" / f"{name}.pt"
+
+    def _save_samples(self, row: Mapping[str, Any], samples: torch.Tensor) -> None:
+        path = self._samples_path(row)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        # Save through a file object: PyTorchFileWriter rejects non-ASCII
+        # path names but accepts a file buffer (Windows user names are not
+        # ASCII-safe).
+        with path.open("wb") as stream:
+            torch.save(samples.detach().cpu(), stream)
+
+    def _load_samples(self, row: Mapping[str, Any]) -> torch.Tensor | None:
+        path = self._samples_path(row)
+        if not path.is_file():
+            return None
+        try:
+            with path.open("rb") as stream:
+                return torch.load(stream, map_location="cpu", weights_only=True)
+        except (OSError, RuntimeError, ValueError) as error:
+            print(f"Could not load stored posterior samples {path}: {error}")
+            return None
 
     def _aggregate(
         self,
