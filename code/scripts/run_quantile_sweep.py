@@ -1,0 +1,500 @@
+"""SFMPE quantile-hyperparameter sweep: one command to generate configs and
+run every (task, quantile) shard at the fixed simulation budget.
+
+The proposal hyperparameter ``proposal.params.quantile`` lives in the
+per-task SFMPE YAML files (``configs/sfmpe_benchmark_<task>.yaml``). Run from
+``code/``, this script:
+
+1. Writes quantile-variant SFMPE configs
+   (``configs/sfmpe_benchmark_<task>_q025.yaml`` and friends) by patching the
+   single uncommented ``quantile:`` line of the canonical per-task config.
+2. Writes a run schedule ``configs/benchmark_quantile_schedule.yaml`` whose
+   shards overlay ``configs/benchmark.yaml`` (the canonical run config, so the
+   seed -- and with it the target observations -- stays identical to the main
+   benchmark). Every shard pins: one task, SFMPE only, ``budgets: [10000]``,
+   the full ``rounds: [1, 2, 3]`` axis, 10 replicates, its quantile-variant
+   SFMPE config, and a dedicated local output directory
+   ``results/quantile-sweep/<shard>``. On Kaggle the standalone script forces
+   ``/kaggle/working/output`` as always; keep each session's downloaded
+   payload under ``results/quantile-sweep/<shard>/``.
+3. Validates that every shard overlay resolves to an existing SFMPE config
+   (via the real BenchmarkRunner), prints the ready-to-copy ``kagglex``
+   commands (same shape as ``help.txt``), and the post-run merge command.
+
+One-command usage (execute all shards sequentially with kagglex):
+
+    python scripts/run_quantile_sweep.py --launch
+
+Other modes:
+
+    python scripts/run_quantile_sweep.py                     # generate + print
+    python scripts/run_quantile_sweep.py --local --device cpu
+    python scripts/run_quantile_sweep.py --merge             # after the runs
+
+Sweep outputs sit NESTED under ``results/quantile-sweep/`` so the main
+comparison script (``scripts/analyze_benchmark.py``, which enumerates only
+direct ``results`` subdirectories) never mixes sweep rows into the canonical
+benchmark tables: quantile is not a runner row key, and the canonical
+quantile=0.5 rows must keep winning dedupe there.
+"""
+
+from __future__ import annotations
+
+import argparse
+import shutil
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+from typing import Any
+
+CODE_ROOT = Path(__file__).resolve().parents[1]
+CONFIGS_DIR = CODE_ROOT / "configs"
+STANDALONE = "notebooks/benchmark_kaggle_standalone.py"
+BASE_CONFIG_NAME = "benchmark.yaml"
+DEFAULT_SCHEDULE = "benchmark_quantile_schedule.yaml"
+SWEEP_DIRNAME = "quantile-sweep"
+
+DEFAULT_QUANTILES = (0.25, 0.75)
+DEFAULT_TASKS = ("Gaussian", "SIR", "StochVol")
+DEFAULT_BUDGETS = (10000,)
+DEFAULT_ROUNDS = (1, 2, 3)
+DEFAULT_REPLICATES = 10
+CANONICAL_Q05_SHARDS = ("gaussian_sfmpe", "sir_sfmpe", "stochvol_sfmpe")
+
+CONFIG_ENV = "SFMPE_BENCHMARK_CONFIG"
+SHARD_ENV = "SFMPE_BENCHMARK_SHARD"
+
+TASK_SFMPE_CONFIG = {
+    "Gaussian": "sfmpe_benchmark_gaussian.yaml",
+    "SIR": "sfmpe_benchmark_sir.yaml",
+    "StochVol": "sfmpe_benchmark_stochvol.yaml",
+}
+TASK_SLUG = {"Gaussian": "gaussian", "SIR": "sir", "StochVol": "stochvol"}
+
+
+def quantile_tag(quantile: float) -> str:
+    """0.25 -> 'q025' (labels must stay filesystem/storage friendly)."""
+    return f"q{round(quantile * 100):03d}"
+
+
+def variant_config_name(task_slug: str, tag: str) -> str:
+    return f"sfmpe_benchmark_{task_slug}_{tag}.yaml"
+
+
+def patch_quantile_line(text: str, quantile: float) -> str:
+    """Replace the canonical ``quantile: <value>`` line, keeping comments.
+
+    The per-task configs contain exactly one uncommented ``quantile:`` entry
+    (under ``proposal.params``); patching text preserves every comment of the
+    canonical file, unlike a YAML round-trip.
+    """
+    lines = text.splitlines(keepends=True)
+    hits = [
+        index
+        for index, line in enumerate(lines)
+        if line.strip().startswith("quantile:") and "#" not in line
+    ]
+    if len(hits) != 1:
+        raise ValueError(
+            "Expected exactly one uncommented 'quantile:' line in the SFMPE "
+            f"config; found {len(hits)}. Patch the config manually or update "
+            "this helper."
+        )
+    first = lines[hits[0]]
+    indent = first[: len(first) - len(first.lstrip())]
+    lines[hits[0]] = f"{indent}quantile: {quantile:g}\n"
+    return "".join(lines)
+
+
+def write_variant_configs(
+    tasks: list[str], quantiles: list[float]
+) -> list[tuple[str, float, Path]]:
+    """Generate per-(task, quantile) SFMPE configs; returns provenance rows."""
+    rows: list[tuple[str, float, Path]] = []
+    for task in tasks:
+        slug = TASK_SLUG[task]
+        base_path = CONFIGS_DIR / TASK_SFMPE_CONFIG[task]
+        if not base_path.is_file():
+            raise FileNotFoundError(f"Missing canonical SFMPE config: {base_path}")
+        for quantile in quantiles:
+            variant_path = CONFIGS_DIR / variant_config_name(
+                slug, quantile_tag(quantile)
+            )
+            header = (
+                "# AUTO-GENERATED by scripts/run_quantile_sweep.py - do not edit.\n"
+                f"# {TASK_SFMPE_CONFIG[task]} with proposal.params.quantile "
+                f"patched to {quantile:g}\n"
+                "# (quantile sweep at the canonical benchmark seed/protocol).\n"
+            )
+            body = patch_quantile_line(
+                base_path.read_text(encoding="utf-8"), quantile
+            )
+            variant_path.write_text(header + body, encoding="utf-8")
+            rows.append((task, quantile, variant_path))
+    return rows
+
+
+def write_schedule(
+    tasks: list[str],
+    quantiles: list[float],
+    budgets: list[int],
+    rounds: list[int],
+    replicates: int,
+    schedule_name: str,
+) -> Path:
+    """Generate the sweep schedule: one shard overlay per (task, quantile).
+
+    Shard overlays may replace any benchmark-config key (the runner does a
+    plain ``config.update(overrides)``), so these shards pin budgets/rounds/
+    replicates and swap the per-task SFMPE config; everything else (seed,
+    devices, training, diagnostics) is inherited from benchmark.yaml.
+    """
+    shards: list[dict[str, Any]] = []
+    for task in tasks:
+        for quantile in quantiles:
+            tag = quantile_tag(quantile)
+            slug = TASK_SLUG[task]
+            shards.append(
+                {
+                    "name": f"{slug}-sfmpe-{tag}",
+                    "tasks": [task],
+                    "methods": ["SFMPE"],
+                    "budgets": list(budgets),
+                    "rounds": list(rounds),
+                    "replicates": replicates,
+                    "sfmpe_configs": {task: variant_config_name(slug, tag)},
+                    "output": f"../results/{SWEEP_DIRNAME}/{slug}-sfmpe-{tag}",
+                }
+            )
+    sections = [
+        "# AUTO-GENERATED by scripts/run_quantile_sweep.py - do not edit.\n",
+        "# SFMPE quantile sweep. Shards overlay the canonical benchmark.yaml:\n",
+        "# the run config's seed fixes the same target observations as the\n",
+        "# main benchmark, so per-quantile rows are comparable per replicate.\n",
+        f"base_config: {BASE_CONFIG_NAME}\n",
+        "shards:\n",
+    ]
+    for shard in shards:
+        sections.append(f"  - name: {shard['name']}\n")
+        for key in (
+            "tasks",
+            "methods",
+            "budgets",
+            "rounds",
+            "replicates",
+            "sfmpe_configs",
+            "output",
+        ):
+            value = shard[key]
+            if isinstance(value, dict):
+                rendered = ", ".join(
+                    f"{item}: {entity}" for item, entity in sorted(value.items())
+                )
+                sections.append(f"    {key}: {{{rendered}}}\n")
+            elif isinstance(value, list):
+                rendered = ", ".join(str(entity) for entity in value)
+                sections.append(f"    {key}: [{rendered}]\n")
+            else:
+                sections.append(f"    {key}: {value}\n")
+    schedule_path = CONFIGS_DIR / schedule_name
+    schedule_path.write_text("".join(sections), encoding="utf-8")
+    return schedule_path
+
+
+def load_schedule(schedule_name: str) -> tuple[Path, list[str]]:
+    """Read the schedule YAML; return (path, shard names in file order)."""
+    import yaml  # local import keeps the script import-light
+
+    schedule_path = CONFIGS_DIR / schedule_name
+    data = yaml.safe_load(schedule_path.read_text(encoding="utf-8"))
+    if not isinstance(data, dict) or not isinstance(data.get("shards"), list):
+        raise ValueError(f"Schedule {schedule_path} must define a shards list.")
+    return schedule_path, [str(entry.get("name")) for entry in data["shards"]]
+
+
+def shard_overrides(schedule_name: str, shard_name: str) -> dict:
+    """Config overlay for one shard (mirrors the standalone script)."""
+    import yaml
+
+    schedule_path = CONFIGS_DIR / schedule_name
+    data = yaml.safe_load(schedule_path.read_text(encoding="utf-8"))
+    for entry in data["shards"]:
+        if str(entry.get("name")) == shard_name:
+            return {key: value for key, value in entry.items() if key != "name"}
+    available = ", ".join(str(item.get("name")) for item in data["shards"])
+    raise KeyError(f"Unknown shard {shard_name!r}; available: {available}")
+
+
+def validate_shards(schedule_name: str, shard_names: list[str]) -> None:
+    """Instantiate the runner per shard with a temp output directory.
+
+    Confirms each overlay parses and every task resolves to an existing
+    variant SFMPE config - the same object the real run will build.
+    """
+    sys.path.insert(0, str(CODE_ROOT / "src"))
+    from sfmpe.benchmark.runner import BenchmarkRunner  # noqa: E402
+
+    for shard_name in shard_names:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            runner = BenchmarkRunner(
+                CONFIGS_DIR / BASE_CONFIG_NAME,
+                output_dir=Path(temp_dir),
+                overrides=shard_overrides(schedule_name, shard_name),
+            )
+            for task in runner.config.get("tasks", {}):
+                sfmpe_path = runner._sfmpe_config_path(task)
+                if not sfmpe_path.is_file():
+                    raise FileNotFoundError(
+                        f"Shard {shard_name}: SFMPE config not found for "
+                        f"{task}: {sfmpe_path}"
+                    )
+                print(f"    ok {shard_name}: {task} -> {sfmpe_path.name}")
+
+
+def kagglex_command(shard_name: str) -> str:
+    """One kagglex submission line for one shard (help.txt shape)."""
+    env_pair = f"{CONFIG_ENV}={BASE_CONFIG_NAME} {SHARD_ENV}={shard_name}"
+    return (
+        "kagglex run --dir . --file " + STANDALONE + " "
+        "--include-data src pyproject.toml configs --gpu t4-2x "
+        f'--env "{env_pair}"'
+    )
+
+
+def print_commands(shard_names: list[str]) -> str:
+    return "\n".join(kagglex_command(name) for name in shard_names)
+
+
+def find_shard_output(results_root: Path, shard_name: str) -> Path | None:
+    """Locate the local JSONL directory of one downloaded/local shard."""
+    nested = results_root / SWEEP_DIRNAME / shard_name
+    candidates = [nested / "output", nested / "outputs", nested]
+    return next(
+        (
+            candidate
+            for candidate in candidates
+            if (candidate / "target_metrics.jsonl").is_file()
+        ),
+        None,
+    )
+
+
+def merge_command_line(shard_names: list[str]) -> str:
+    """The merge command: canonical q=0.5 shards + all sweep shards.
+
+    The merged tables then contain quantile=0.5 (canonical run) next to the
+    sweep quantiles under one output directory.
+    """
+    inputs = [
+        f"results/{name}/output" for name in CANONICAL_Q05_SHARDS
+    ] + [
+        f"results/{SWEEP_DIRNAME}/{name}/output" for name in shard_names
+    ]
+    return (
+        "python -m sfmpe.benchmark.report --config configs/benchmark.yaml "
+        f"--merge-inputs {' '.join(inputs)} "
+        f"--merge-output results/{SWEEP_DIRNAME}/merged"
+    )
+
+
+def launch_kagglex(shard_names: list[str]) -> int:
+    """Run every kagglex submission sequentially (one shard per session)."""
+    if shutil.which("kagglex") is None:
+        print(
+            "kagglex is not installed in this environment. Copy-paste these "
+            "commands from a machine with Kaggle CLI access:\n\n"
+            + print_commands(shard_names)
+        )
+        return 1
+    failed = []
+    for index, shard_name in enumerate(shard_names, start=1):
+        print(f"[{index}/{len(shard_names)}] Launching shard {shard_name!r}...")
+        result = subprocess.run(kagglex_command(shard_name), cwd=CODE_ROOT, shell=True)
+        if result.returncode != 0:
+            failed.append(shard_name)
+            print(
+                f"  !! shard {shard_name!r} exited with "
+                f"{result.returncode}; continuing."
+            )
+    if failed:
+        print("Failed shards: " + ", ".join(failed))
+        return 1
+    print("All sweep shards launched and finished.")
+    return 0
+
+
+def launch_local(shard_names: list[str], device: str | None) -> int:
+    """Run every shard locally through the standalone script (resume-safe)."""
+    failed = []
+    for index, shard_name in enumerate(shard_names, start=1):
+        command = [
+            sys.executable,
+            STANDALONE,
+            "--config",
+            f"configs/{BASE_CONFIG_NAME}",
+            "--schedule",
+            f"configs/{DEFAULT_SCHEDULE}",
+            "--shard",
+            shard_name,
+        ]
+        if device is not None:
+            command += ["--device", device]
+        print(f"[{index}/{len(shard_names)}] Local shard {shard_name!r}...")
+        result = subprocess.run(command, cwd=CODE_ROOT)
+        if result.returncode != 0:
+            failed.append(shard_name)
+    if failed:
+        print("Failed shards: " + ", ".join(failed))
+        return 1
+    print("All local sweep shards completed.")
+    return 0
+
+
+def run_merge(shard_names: list[str]) -> int:
+    """Merge downloaded/local sweep shards with the canonical q=0.5 shards."""
+    sys.path.insert(0, str(CODE_ROOT / "src"))
+    from sfmpe.benchmark.report import merge_benchmark_results  # noqa: E402
+
+    results_root = CODE_ROOT / "results"
+    inputs: list[Path] = []
+    for shard_name in list(shard_names) + list(CANONICAL_Q05_SHARDS):
+        located = find_shard_output(results_root, shard_name)
+        if located is None:
+            print(
+                f"  !! no target_metrics.jsonl for shard {shard_name!r}; "
+                "skipping in merge."
+            )
+            continue
+        inputs.append(located)
+    if not inputs:
+        print("Nothing to merge.")
+        return 1
+    output_dir = results_root / SWEEP_DIRNAME / "merged"
+    merged = merge_benchmark_results(inputs, output_dir)
+    print(f"Merged {len(inputs)} shard outputs into {merged}")
+    return 0
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Run the SFMPE quantile sweeps (budget 10000, rounds 1-3).",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+    parser.add_argument(
+        "--quantiles",
+        nargs="+",
+        type=float,
+        default=list(DEFAULT_QUANTILES),
+        help="Quantile values to sweep (0.5 is covered by the canonical run).",
+    )
+    parser.add_argument(
+        "--tasks",
+        nargs="+",
+        default=list(DEFAULT_TASKS),
+        choices=sorted(TASK_SFMPE_CONFIG),
+        help="Tasks included in the sweep.",
+    )
+    parser.add_argument(
+        "--budgets",
+        nargs="+",
+        type=int,
+        default=list(DEFAULT_BUDGETS),
+        help="Simulation budgets for every sweep shard.",
+    )
+    parser.add_argument(
+        "--rounds",
+        nargs="+",
+        type=int,
+        default=list(DEFAULT_ROUNDS),
+        help="Rounds axis of each sweep shard.",
+    )
+    parser.add_argument(
+        "--replicates",
+        type=int,
+        default=DEFAULT_REPLICATES,
+        help="Replicates per shard group.",
+    )
+    parser.add_argument(
+        "--schedule",
+        default=DEFAULT_SCHEDULE,
+        help="Schedule YAML to (re)generate inside configs/.",
+    )
+    parser.add_argument(
+        "--launch",
+        action="store_true",
+        help="Run every shard via kagglex sequentially (requires kagglex).",
+    )
+    parser.add_argument(
+        "--local",
+        action="store_true",
+        help="Run every shard locally via the standalone benchmark script.",
+    )
+    parser.add_argument(
+        "--device",
+        default=None,
+        choices=["auto", "cpu", "cuda"],
+        help="Device override for --local runs.",
+    )
+    parser.add_argument(
+        "--merge",
+        action="store_true",
+        help="Merge downloaded/local sweep shards with the canonical q=0.5 "
+        "shards (run after the sweeps complete).",
+    )
+    parser.add_argument(
+        "--skip-generate",
+        action="store_true",
+        help="Do not rewrite configs (use existing variant YAMLs/schedule).",
+    )
+    return parser.parse_args()
+
+
+def main() -> None:
+    args = parse_args()
+
+    if sum(bool(flag) for flag in (args.launch, args.local, args.merge)) > 1:
+        raise SystemExit("--launch / --local / --merge are mutually exclusive.")
+
+    if not args.skip_generate:
+        for task, quantile, path in write_variant_configs(
+            args.tasks, args.quantiles
+        ):
+            print(f"Config: {task} quantile={quantile:g} -> {path.name}")
+        schedule_path = write_schedule(
+            args.tasks,
+            args.quantiles,
+            args.budgets,
+            args.rounds,
+            args.replicates,
+            args.schedule,
+        )
+        print(f"Schedule: {schedule_path.name}")
+
+    _, shard_names = load_schedule(args.schedule)
+    print(f"Shards ({len(shard_names)}): {', '.join(shard_names)}")
+
+    if args.launch:
+        raise SystemExit(launch_kagglex(shard_names))
+    if args.local:
+        raise SystemExit(launch_local(shard_names, args.device))
+    if args.merge:
+        raise SystemExit(run_merge(shard_names))
+
+    print("\nValidating shard overlays with the real runner...")
+    validate_shards(args.schedule, shard_names)
+
+    print("\nReady-to-copy kagglex commands:\n")
+    print(print_commands(shard_names))
+    print(
+        "\nAfter each Kaggle session finishes, download its payload and keep "
+        f"it under results/{SWEEP_DIRNAME}/<shard>/ (output/ inside), then "
+        "merge sweep shards with the canonical q=0.5 shards:\n"
+        "  python scripts/run_quantile_sweep.py --merge\n"
+        "or directly:\n"
+        f"  {merge_command_line(shard_names)}"
+    )
+
+
+if __name__ == "__main__":
+    main()
