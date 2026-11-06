@@ -61,7 +61,7 @@ sfmpe_proposal_methods: {}
 # it is pinned by the devices.nn policy.
 sfmpe_training:
   epochs: 1000             # max number of epochs per round
-  stop_after_epochs: 20   # patience: stop after N epochs without validation gain
+  stop_after_epochs: 50   # patience: stop after N epochs without validation gain
   batch_size: 1000         # clamped to the per-round simulation count
   shuffle: true          # shuffle minibatches inside an epoch
   num_workers: 0         # DataLoader workers (0 = same process)
@@ -78,7 +78,7 @@ sfmpe_training:
 # `training_batch_size`.
 snpe_c_training:
   max_num_epochs: 1000      # cap on epochs (sbi default is effectively unlimited)
-  stop_after_epochs: 20    # patience on validation log-prob
+  stop_after_epochs: 50    # patience on validation log-prob
   training_batch_size: 1000 # clamped to the per-round simulation count
   learning_rate: 0.0005   # Adam learning rate
   validation_fraction: 0.1
@@ -129,6 +129,6 @@ kaggle:
   title: SFMPE benchmark
   gpu: t4-2x
   internet: true
-  max_hours: 11
+  max_hours: 12
   submit_script: notebooks/benchmark_kaggle_standalone.py
   output_dir: results/kaggle-benchmark
