@@ -54,8 +54,7 @@ aggregate a finished group on the next launch.
 
 A shard without an explicit config runs the schedule's ``base_config``
 (``benchmark.yaml``), not the smoke profile. When passing several envs to
-``kagglex``, put them after ONE ``--env``: ``--env "K1=V1 K2=V2"`` (its
-``--env`` uses ``nargs="*"`` and repeated flags overwrite each other).
+``kagglex``, put them after ONE ``--env``: ``--env K1=V1 K2=V2``.
 
 Rounds axis: ``rounds: [1, 2, 3]`` runs one independent experiment per
 value, each splitting the SAME total simulation budget evenly across that
@@ -88,7 +87,7 @@ from typing import TextIO
 BENCHMARK_CONFIG_ENV = "SFMPE_BENCHMARK_CONFIG"
 BENCHMARK_SHARD_ENV = "SFMPE_BENCHMARK_SHARD"
 DEFAULT_SCHEDULE_NAME = "benchmark_schedule.yaml"
-
+# DEFAULT_SCHEDULE_NAME = "benchmark_quantile_schedule.yaml"
 
 def find_project_root() -> Path:
     """Locate the bundled project root (contains pyproject.toml and src/).
@@ -256,9 +255,9 @@ def print_schedule(schedule: dict, schedule_path: Path) -> None:
         print(f"- {name} ({summary})")
         print(
             "    kagglex run --dir . --file notebooks/benchmark_kaggle_standalone.py "
-            "--include-data src pyproject.toml configs --gpu t4-2x "
-            f'--env "{BENCHMARK_CONFIG_ENV}={base_config} '
-            f'{BENCHMARK_SHARD_ENV}={name}"'
+            f"--include-data src pyproject.toml configs --gpu t4-2x --title {name} "
+            f'--env {BENCHMARK_CONFIG_ENV}={base_config} '
+            f'{BENCHMARK_SHARD_ENV}={name}'
         )
     print("")
     print(

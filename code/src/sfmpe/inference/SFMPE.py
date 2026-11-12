@@ -362,15 +362,13 @@ class SFMPE:
             raise ValueError(
                 "'run_sequential.device' must match the initialized device"
             )
-        if (
-            config.get("clean_sampling", False)
-            and self.proposal_params.method == "Truncated"
-            and "quantile" not in self.proposal_params.method_params
-        ):
-            raise ValueError(
-                "'proposal.params.quantile' is required for clean-sampled "
-                "Truncated proposals"
-            )
+        if self.proposal_params.method == "Truncated":
+            quantile = self.proposal_params.method_params.get("quantile")
+            if quantile is None or not 0.0 < float(quantile) < 1.0:
+                raise ValueError(
+                    "'proposal.params.quantile' must be in (0, 1) for "
+                    "Truncated prior regions"
+                )
         checkpoint_path = training.get("path")
         if checkpoint_path:
             FilePath(checkpoint_path).parent.mkdir(parents=True, exist_ok=True)

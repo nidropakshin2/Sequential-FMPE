@@ -3,6 +3,7 @@ import yaml
 import time 
 import pytest
 import os
+from types import SimpleNamespace
 
 
 from sfmpe.tasks.SIR import SIRTask
@@ -131,6 +132,101 @@ def test_round_manager(sir_task, fm_estimator):
     path = f"./code/tests/test_models/test_SIR_{datetime}.pth.tar.gz"
     manager = RoundManager(sir_task, fm_estimator, params)
     manager.run_sequential(3, 100, path=path, epochs=10)
-    
 
 
+def _truncated_test_manager(max_prior_draws=1000, condition_count=1):
+    class UnitBoxSupport:
+        def check(self, samples):
+            return ((samples >= 0) & (samples <= 1)).all(dim=-1)
+
+    class UnitBoxPrior:
+        support = UnitBoxSupport()
+
+        def sample(self, shape, **kwargs):
+            device = kwargs.get("device", "cpu")
+            return torch.rand(*shape, 2, device=device)
+
+    class Logger:
+        def debug(self, *_args, **_kwargs):
+            pass
+
+        def info(self, *_args, **_kwargs):
+            pass
+
+    task = SimpleNamespace(
+        prior=UnitBoxPrior(),
+        theta_dim=2,
+        logger=Logger(),
+    )
+    params = ProposalParams()
+    params.method = "Truncated"
+    params.method_params = {
+        "quantile": 0.8,
+        "region_samples": 100,
+        "padding": 0.0,
+        "max_prior_draws": max_prior_draws,
+    }
+    params.theta_0 = torch.zeros(1, condition_count, 2)
+
+    class Posterior:
+        def sample(self, shape, device=None):
+            centers = torch.linspace(0.2, 0.8, condition_count, device=device)
+            return centers.reshape(1, condition_count, 1) + 0.3 * (
+                torch.rand(*shape, condition_count, 2, device=device) - 0.5
+            )
+
+        def log_prob(self, _samples):
+            raise AssertionError("Truncated prior sampling must not use log_prob")
+
+    manager = RoundManager(task, object(), params, logger=task.logger)
+    manager.update_proposal(Posterior())
+    return manager
+
+
+def test_truncated_sampling_draws_from_prior_inside_posterior_region():
+    manager = _truncated_test_manager()
+
+    samples = manager.clean_sample_experimental((8,), clean_sampling=False)
+
+    assert manager.truncated_bounds is not None
+    lower, upper = manager.truncated_bounds
+    assert samples.shape == (8, manager.K, manager.task.theta_dim)
+    assert torch.all(samples >= lower.unsqueeze(0))
+    assert torch.all(samples <= upper.unsqueeze(0))
+    assert torch.all(manager.task.prior.support.check(samples))
+
+
+def test_legacy_truncated_sampler_uses_conditional_prior():
+    manager = _truncated_test_manager()
+
+    samples = manager.clean_sample((5, manager.K), clean_sampling=False)
+
+    assert samples.shape == (5, manager.K, manager.task.theta_dim)
+    assert manager.truncated_bounds is not None
+    lower, upper = manager.truncated_bounds
+    assert torch.all(samples >= lower.unsqueeze(0))
+    assert torch.all(samples <= upper.unsqueeze(0))
+
+
+def test_truncated_sampling_keeps_conditions_in_their_own_regions():
+    manager = _truncated_test_manager(condition_count=2)
+
+    samples = manager.clean_sample_experimental((8,), clean_sampling=False)
+
+    assert samples.shape == (8, 2, manager.task.theta_dim)
+    assert torch.all(samples[:, 0] < 0.5)
+    assert torch.all(samples[:, 1] > 0.5)
+    lower, upper = manager.truncated_bounds
+    assert torch.all(samples >= lower.unsqueeze(0))
+    assert torch.all(samples <= upper.unsqueeze(0))
+
+
+def test_truncated_sampling_fails_when_region_cannot_be_sampled():
+    manager = _truncated_test_manager(max_prior_draws=4)
+    manager.truncated_bounds = (
+        torch.full((manager.K, manager.task.theta_dim), 2.0),
+        torch.full((manager.K, manager.task.theta_dim), 3.0),
+    )
+
+    with pytest.raises(RuntimeError, match="accepted 0/"):
+        manager._sample_from_truncated_prior((1,))

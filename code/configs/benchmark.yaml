@@ -25,7 +25,7 @@ methods:
   - SFMPE
   - SNPE_C
   - SMC_ABC
-budgets: [100, 1000, 10000]
+budgets: [1000, 10000, 100000]
 replicates: 10
 # Rounds axis: one experiment per value, each splitting the TOTAL budget
 # evenly across that many rounds (1000 -> [1000], [500, 500],
@@ -100,7 +100,7 @@ smc_abc:
   # metered budget; `return_summary` stays False (benchmark needs a single
   # posterior-distribution object, not a dict).
   particles: 1000            # num_particles per population
-  initial_population: 5000   # first-round population size
+  initial_population: 10000   # first-round population size
   num_workers: 1             # SMCABC worker count for simulations
   epsilon_decay: 0.5         # multiplicative epsilon decay per population
   distance_based_decay: false

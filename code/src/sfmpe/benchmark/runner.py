@@ -364,31 +364,22 @@ class BenchmarkRunner:
         if training.get("validation_seed") is not None:
             train_kwargs["validation_seed"] = training["validation_seed"]
         nn_device = self._nn_device()
-        # Clean sampling comes from the per-task SFMPE config
-        # (run_sequential.clean_sampling). 'Truncated' proposals implementing
-        # it compute proposal log-probs via the ODE path, which can underflow
-        # ("underflow in dt") on early untrained flows; per-task configs may
-        # disable it where that path is not reliable.
+        # clean_sampling remains relevant to non-Truncated proposals.
+        # Truncated sampling uses prior rejection inside posterior-derived
+        # bounds and does not evaluate the flow's log-density.
         clean_sampling = bool(
             pipeline.config.get("run_sequential", {}).get(
                 "clean_sampling",
                 True,
             )
         )
-        # Same fast-fail as SFMPE.run: the benchmark bypasses run() and
-        # drives manager.run_round_experimental directly, so a Truncated +
-        # clean-sampling task without a quantile would otherwise die with an
-        # opaque torch.quantile error mid-run.
-        if (
-            clean_sampling
-            and pipeline.proposal_params.method == "Truncated"
-            and "quantile" not in pipeline.proposal_params.method_params
-        ):
-            raise ValueError(
-                f"'proposal.params.quantile' is required for clean-sampled "
-                f"Truncated proposals (task {task_name}); provide "
-                "proposal.params or set clean_sampling: false"
-            )
+        if pipeline.proposal_params.method == "Truncated":
+            quantile = pipeline.proposal_params.method_params.get("quantile")
+            if quantile is None or not 0.0 < float(quantile) < 1.0:
+                raise ValueError(
+                    f"'proposal.params.quantile' must be in (0, 1) for "
+                    f"Truncated prior regions (task {task_name})"
+                )
         meter.set_phase("inference")
         for round_id, round_budget in enumerate(round_budgets):
             result = pipeline.manager.run_round_experimental(
@@ -401,15 +392,16 @@ class BenchmarkRunner:
                 raise RuntimeError(
                     f"SFMPE stopped in round {round_id} for {task_name}."
                 )
-            # Cumulative training protocol: train on every simulation stored
-            # so far (round 0 only, then rounds {0,1}, then {0,1,2}, ...).
-            # Reusing already-simulated draws costs no budget, and it mirrors
-            # how sbi's sequential SNPE-C trains on its accumulated dataset
-            # at equal simulation budgets.
+            # Truncated SFMPE draws each round from a different prior
+            # conditional on the current region. Train on that round alone:
+            # pooling rounds would mix distinct proposals without the
+            # importance correction required to recover a common target.
             round_kwargs = dict(train_kwargs)
             round_kwargs["batch_size"] = min(round_kwargs["batch_size"], round_budget)
             pipeline.manager.train_estimator(
-                list(range(round_id + 1)),
+                [round_id]
+                if pipeline.proposal_params.method == "Truncated"
+                else list(range(round_id + 1)),
                 device=nn_device,
                 **round_kwargs,
             )

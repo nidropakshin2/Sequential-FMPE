@@ -7,6 +7,7 @@ code/tests/test_models/*
 code/tests/logs/*
 code/.kagglex
 code/results
+code/results_new
 code/help.txt
 code/journal.txt
 code/dist

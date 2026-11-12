@@ -40,24 +40,34 @@ shards:
   - name: gaussian-snpe-c
     tasks: [Gaussian]
     methods: [SNPE_C]
+    budgets: [100000]
+    rounds: [1, 2, 3]
   - name: gaussian-smc-abc
     tasks: [Gaussian]
     methods: [SMC_ABC]
   - name: sir-sfmpe
     tasks: [SIR]
     methods: [SFMPE]
+    budgets: [100000]
+    rounds: [3]
   - name: sir-snpe-c
     tasks: [SIR]
     methods: [SNPE_C]
+    budgets: [100000]
+    rounds: [1, 2, 3]
   - name: sir-smc-abc
     tasks: [SIR]
     methods: [SMC_ABC]
   - name: stochvol-sfmpe
     tasks: [StochVol]
     methods: [SFMPE]
+    budgets: [100000]
+    rounds: [3]
   - name: stochvol-snpe-c
     tasks: [StochVol]
     methods: [SNPE_C]
+    budgets: [100000]
+    rounds: [1, 2, 3]
   - name: stochvol-smc-abc
     tasks: [StochVol]
     methods: [SMC_ABC]

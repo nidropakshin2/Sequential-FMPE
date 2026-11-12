@@ -40,6 +40,7 @@ class RoundManager:
         self.losses = []
 
         self.validator = validator
+        self.truncated_bounds = None
         
         # Log initialization
         self.logger.info(f"Task: {task.__class__.__name__}")
@@ -66,9 +67,18 @@ class RoundManager:
             # theta = self.clean_sample((samples_per_round, *self.proposal_params.x_0.shape[:-1]), clean_sampling=clean_sampling).to(self.device)
             # theta = self.clean_sample_experimental((samples_per_round, self.K), clean_sampling=clean_sampling).to(self.device)
         else:
-            # theta = self.proposal.sample((sims_per_round, ), device=self.device)
-            # theta = self.clean_sample((samples_per_round, ), clean_sampling=clean_sampling).to(self.device)
-            theta = self.clean_sample_experimental((samples_per_round, ), clean_sampling=clean_sampling).to(self.device)
+            # Truncated means sampling from the prior conditional on the
+            # region inferred from the previous posterior, not filtering
+            # posterior draws by their flow density.
+            effective_clean_sampling = (
+                True
+                if self.proposal_params.method == "Truncated"
+                else clean_sampling
+            )
+            theta = self.clean_sample_experimental(
+                (samples_per_round,),
+                clean_sampling=effective_clean_sampling,
+            ).to(self.device)
             
         # self.logger.debug(f"Sampled {samples_per_round} parameters with shape {theta.shape}")
 
@@ -165,7 +175,153 @@ class RoundManager:
         self.logger.debug(f"Updating proposal distribution")
         # self.logger.debug(f"Old proposal: {self.proposal}")
         self.proposal = posterior
+        if self.proposal_params.method == "Truncated":
+            self.truncated_bounds = self._build_truncated_bounds(posterior)
         # self.logger.debug(f"New proposal: {posterior}")
+
+    def _prior_support_mask(self, samples: torch.Tensor) -> torch.Tensor:
+        """Return one prior-support validity flag for each parameter vector."""
+        try:
+            support = self.task.prior.support
+        except AttributeError:
+            return torch.ones(
+                samples.shape[:-1],
+                dtype=torch.bool,
+                device=samples.device,
+            )
+
+        mask = support.check(samples)
+        if mask.shape == samples.shape:
+            mask = mask.all(dim=-1)
+        if mask.shape != samples.shape[:-1]:
+            raise ValueError(
+                "Prior support must return one boolean per parameter vector."
+            )
+        return mask
+
+    def _build_truncated_bounds(self, posterior) -> tuple[torch.Tensor, torch.Tensor]:
+        params = self.proposal_params.method_params or {}
+        mass = float(params.get("quantile", 0.9))
+        if not 0.0 < mass < 1.0:
+            raise ValueError(
+                "Truncated proposal quantile must be a central mass in (0, 1)."
+            )
+        num_samples = int(params.get("region_samples", 2048))
+        if num_samples < 2:
+            raise ValueError("Truncated region_samples must be at least 2.")
+        padding = float(params.get("padding", 0.1))
+        if padding < 0:
+            raise ValueError("Truncated proposal padding must be non-negative.")
+
+        samples = posterior.sample((num_samples,), device=self.device)
+        if samples.ndim != 3 or samples.shape[1:] != (
+            self.K,
+            self.task.theta_dim,
+        ):
+            raise ValueError(
+                "Posterior samples for Truncated proposals must have shape "
+                f"(samples, {self.K}, {self.task.theta_dim}); "
+                f"got {tuple(samples.shape)}."
+            )
+        valid = self._prior_support_mask(samples) & torch.isfinite(samples).all(-1)
+        lower_quantile = (1.0 - mass) / 2.0
+        upper_quantile = 1.0 - lower_quantile
+        lower = torch.empty(
+            (self.K, self.task.theta_dim),
+            device=samples.device,
+            dtype=samples.dtype,
+        )
+        upper = torch.empty_like(lower)
+        for index in range(self.K):
+            valid_samples = samples[valid[:, index], index]
+            if valid_samples.shape[0] < 2:
+                raise RuntimeError(
+                    "Cannot construct a Truncated prior region: fewer than "
+                    f"two posterior samples are inside prior support for "
+                    f"condition {index}."
+                )
+            lower[index] = torch.quantile(
+                valid_samples, lower_quantile, dim=0
+            )
+            upper[index] = torch.quantile(
+                valid_samples, upper_quantile, dim=0
+            )
+
+        width = upper - lower
+        padding_amount = padding * width
+        lower = lower - padding_amount
+        upper = upper + padding_amount
+        if not torch.isfinite(lower).all() or not torch.isfinite(upper).all():
+            raise RuntimeError("Truncated prior region has non-finite bounds.")
+        return lower, upper
+
+    def _sample_from_truncated_prior(
+        self, shape: tuple[int, ...]
+    ) -> torch.Tensor:
+        if self.truncated_bounds is None:
+            raise RuntimeError(
+                "Truncated prior sampling requires bounds from a previous "
+                "posterior; fit the first round and call update_proposal first."
+            )
+
+        params = self.proposal_params.method_params or {}
+        max_draws = int(params.get("max_prior_draws", 10_000_000))
+        if max_draws < 1:
+            raise ValueError("Truncated max_prior_draws must be positive.")
+        lower, upper = self.truncated_bounds
+        total = 1
+        for dimension in shape:
+            total *= dimension
+        result = torch.empty(
+            (total, self.K, self.task.theta_dim),
+            device=self.device,
+            dtype=lower.dtype,
+        )
+        filled = [0] * self.K
+        attempted = 0
+        while min(filled) < total and attempted < max_draws:
+            remaining = total - min(filled)
+            batch_size = min(max(2 * remaining, 64), max_draws - attempted)
+            candidates = self.task.prior.sample((batch_size, self.K)).to(
+                self.device
+            )
+            if candidates.shape != (
+                batch_size,
+                self.K,
+                self.task.theta_dim,
+            ):
+                raise ValueError(
+                    "Prior samples for Truncated proposals must have shape "
+                    f"({batch_size}, {self.K}, {self.task.theta_dim}); "
+                    f"got {tuple(candidates.shape)}."
+                )
+            attempted += batch_size
+            accepted_mask = self._prior_support_mask(candidates)
+            accepted_mask &= (
+                (candidates >= lower.unsqueeze(0))
+                & (candidates <= upper.unsqueeze(0))
+            ).all(dim=-1)
+            for index in range(self.K):
+                condition_remaining = total - filled[index]
+                if condition_remaining == 0:
+                    continue
+                accepted = candidates[accepted_mask[:, index], index]
+                take = min(condition_remaining, accepted.shape[0])
+                if take:
+                    result[filled[index] : filled[index] + take, index] = (
+                        accepted[:take]
+                    )
+                    filled[index] += take
+
+        if min(filled) < total:
+            completed = min(filled)
+            raise RuntimeError(
+                "Could not draw the requested Truncated prior batch: "
+                f"accepted {completed}/{total} samples per condition at "
+                f"minimum after {attempted} prior "
+                "draws. Increase max_prior_draws or widen the region."
+            )
+        return result.reshape(*shape, self.K, self.task.theta_dim)
     
 
     def run_sequential(
@@ -223,6 +379,16 @@ class RoundManager:
 
 
     def clean_sample(self, shape, **kwargs):
+        if self.proposal_params.method == "Truncated":
+            if self.proposal == self.task.prior:
+                return self.task.prior.sample(shape).to(self.device)
+            if not shape or shape[-1] != self.K:
+                raise ValueError(
+                    "Truncated prior sampling expects the condition count "
+                    f"{self.K} as the last sample dimension."
+                )
+            return self._sample_from_truncated_prior(tuple(shape[:-1]))
+
         if not kwargs.get("clean_sampling", False):
             self.logger.debug("NO clean sampling")
             return self.proposal.sample(shape, device=self.device)
@@ -245,19 +411,6 @@ class RoundManager:
                 support_mask = support_mask.all(dim=-1)
 
             clean = data[support_mask]
-            if self.proposal_params.method == 'Truncated':
-                try:
-                    logp = self.proposal.log_prob(clean.to(self.device))
-                    # self.logger.debug(f"{mask}")
-                    mask = (logp >= torch.quantile(logp, self.proposal_params.method_params.get('quantile', None)))
-                    # self.logger.debug(f"{data.shape}, {logp.shape}, {mask}")
-                    clean = clean[mask]
-                
-                # если у prior не задана плотность, то мы не запускаем на нем truncated
-                # это в любом случае бесполезно
-                except NotImplementedError:
-                    pass
-                
             # self.logger.debug(f"_add_clean data {data.shape}")
             # self.logger.debug(f"_add_clean mask {mask.shape}")
             # self.logger.debug(f"_add_clean clean {clean.shape}")
@@ -356,6 +509,13 @@ class RoundManager:
 
 
     def clean_sample_experimental(self, shape, **kwargs):
+        if self.proposal_params.method == "Truncated":
+            if self.proposal == self.task.prior:
+                return self.task.prior.sample(
+                    (*shape, self.K)
+                ).to(self.device)
+            return self._sample_from_truncated_prior(tuple(shape))
+
         if not kwargs.get("clean_sampling", False):
             self.logger.debug("NO clean sampling")
             return self.proposal.sample(shape, device=self.device)
@@ -433,21 +593,6 @@ class RoundManager:
             # self.logger.debug(f"mask1.dtype = {support_mask.dtype}, check support is None: {self.task.check_support is None}")
             # self.logger.debug(f"data {data.shape}, mask1: {support_mask.shape}")
 
-            if self.proposal_params.method == 'Truncated':
-                try:
-                    logp = self.proposal.log_prob(data[support_mask].to(self.device))
-
-                    if quantile_value is None:
-                        quantile_value = torch.quantile(logp, self.proposal_params.method_params.get('quantile', None))
-
-                    log_mask = (logp >= quantile_value)
-                    mask = support_mask.clone()
-                    mask[support_mask] = log_mask
-                    return mask, quantile_value
-                # если у prior не задана плотность, то мы не запускаем на нем truncated
-                # это в любом случае бесполезно
-                except NotImplementedError:
-                    return support_mask, quantile_value
             return support_mask, quantile_value
 
         samples = self.proposal.sample(shape, device=self.device)

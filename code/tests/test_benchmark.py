@@ -9,6 +9,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import numpy as np
+import pytest
 import torch
 import yaml
 
@@ -574,7 +575,19 @@ class _FitRunner(SimpleNamespace):
     _snpe_c_sampler = staticmethod(BenchmarkRunner._snpe_c_sampler)
 
 
-def test_sfmpe_training_block_full_option_wiring(tmp_path: Path, monkeypatch):
+@pytest.mark.parametrize(
+    ("proposal_method", "expected_rounds"),
+    [
+        ("Truncated", [[0], [1], [2]]),
+        ("NPE-A", [[0], [0, 1], [0, 1, 2]]),
+    ],
+)
+def test_sfmpe_training_block_full_option_wiring(
+    tmp_path: Path,
+    monkeypatch,
+    proposal_method: str,
+    expected_rounds: list[list[int]],
+):
     """Every sfmpe_training key reaches fm_estimator.train via
     manager.train_estimator (batch_size clamped per round; the checkpoint
     path kwarg is only passed when configured).
@@ -584,7 +597,7 @@ def test_sfmpe_training_block_full_option_wiring(tmp_path: Path, monkeypatch):
     observed_calls: list[dict] = []
 
     class FakeProposalParams:
-        method = "Truncated"
+        method = proposal_method
         method_params = {"quantile": 0.5}
 
     class FakeManager:
@@ -647,15 +660,11 @@ def test_sfmpe_training_block_full_option_wiring(tmp_path: Path, monkeypatch):
         runner, "Gaussian", task, torch.zeros(2), budget=10, rounds=3, meter=meter
     )
 
-    assert method == "Truncated"
+    assert method == proposal_method
     assert observed_pipeline_devices == ["cpu"]
-    # remaining budget = 10 - 2 setup sims, split over 3 rounds: [3, 3, 2];
-    # every round trains cumulatively on all stored rounds so far
-    assert [call["rounds"] for call in observed_calls] == [
-        [0],
-        [0, 1],
-        [0, 1, 2],
-    ]
+    # remaining budget = 10 - 2 setup sims, split over 3 rounds: [3, 3, 2].
+    # Truncated SFMPE trains on each round's prior-conditional data separately.
+    assert [call["rounds"] for call in observed_calls] == expected_rounds
     assert [call["batch_size"] for call in observed_calls] == [3, 3, 2]
     expected_common = {
         "epochs": 7,
@@ -749,13 +758,12 @@ def _install_fake_sbi(monkeypatch, fake_sbi_cls):
     return inference_module
 
 
-def test_sfmpe_clean_truncated_without_quantile_fails(monkeypatch):
-    """Clean-sampled Truncated without proposal.params.quantile must fail
-    fast in the runner (same validation SFMPE.run performs)."""
+def test_sfmpe_truncated_without_valid_quantile_fails(monkeypatch):
+    """Truncated prior regions require a central-mass quantile."""
     import sfmpe.benchmark.runner as runner_module
 
     fake_pipeline = SimpleNamespace(
-        config={"run_sequential": {"clean_sampling": True}},
+        config={"run_sequential": {"clean_sampling": False}},
         proposal_params=SimpleNamespace(
             method="Truncated",
             method_params={},
