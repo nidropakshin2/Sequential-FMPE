@@ -25,7 +25,7 @@ methods:
   - SFMPE
   - SNPE_C
   - SMC_ABC
-budgets: [1000, 10000, 100000]
+budgets: [100, 1000, 10000]
 replicates: 10
 # Rounds axis: one experiment per value, each splitting the TOTAL budget
 # evenly across that many rounds (1000 -> [1000], [500, 500],

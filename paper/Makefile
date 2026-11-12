@@ -4,6 +4,7 @@ SRC_NAME = term
 all: build clean
 
 build:
+# latexmk detects biblatex and runs biber when the bibliography needs updating.
 	latexmk -pdf -cd -time -verbose src/$(SRC_NAME).tex
 clean: build
 # 	latexmk -cd -c $(PAPER_PATH)/src/main.tex 

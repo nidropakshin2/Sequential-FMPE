@@ -10,7 +10,13 @@ param(
     [ValidatePattern('^[A-Za-z0-9._-]+$')]
     [string]$RemotePython = "python3.11",
 
-    [long]$MaxPriorDraws = 1000000000
+    [ValidatePattern('^[A-Za-z0-9._-]+$')]
+    [string]$Shard = "all-tasks-sfmpe",
+
+    [ValidateSet("RTXA6000", "RTXA4000")]
+    [string]$GpuProfile = "RTXA6000",
+
+    [long]$MaxPriorDraws = 10000000
 )
 
 $ErrorActionPreference = "Stop"
@@ -54,10 +60,21 @@ $remotePythonVersion = [version]::new(
     [int]$Matches[2],
     0
 )
-if ($remotePythonVersion -lt [version]"3.11") {
-    throw "Remote Python 3.11+ is required for the selected PyTorch CUDA 12.8 wheel."
+if ($remotePythonVersion -lt [version]"3.10") {
+    throw "Remote Python 3.10+ is required for the selected PyTorch CUDA 12.8 wheel."
 }
 
+$gpuRequirements = @{
+    RTXA6000 = @{
+        Name = "RTX A6000"
+        MinimumMemoryMiB = 45000
+    }
+    RTXA4000 = @{
+        Name = "RTX A4000"
+        MinimumMemoryMiB = 14000
+    }
+}
+$gpuRequirement = $gpuRequirements[$GpuProfile]
 $gpuRows = @(
     & ssh $SshTarget "nvidia-smi --query-gpu=name,driver_version,memory.total --format=csv,noheader"
 )
@@ -66,10 +83,10 @@ if ($LASTEXITCODE -ne 0 -or $gpuRows.Count -eq 0) {
 }
 
 $minimumDriver = [version]"570.26"
-$a6000Found = $false
+$compatibleGpuFound = $false
 foreach ($gpuRow in $gpuRows) {
     $columns = "$gpuRow" -split ","
-    if ($columns.Count -lt 3 -or $columns[0] -notmatch "RTX A6000") {
+    if ($columns.Count -lt 3 -or $columns[0] -notmatch [regex]::Escape($gpuRequirement.Name)) {
         continue
     }
     if ($columns[1].Trim() -notmatch '^(\d+(?:\.\d+){1,3})') {
@@ -83,14 +100,14 @@ foreach ($gpuRow in $gpuRows) {
     if ($driverVersion -lt $minimumDriver) {
         throw "RTX A6000 driver $driverVersion is too old for the selected CUDA 12.8 runtime; Linux driver 570.26+ is required."
     }
-    if ($memoryMiB -lt 45000) {
-        throw "RTX A6000 reports only $memoryMiB MiB; expected a 48 GB card."
+    if ($memoryMiB -lt $gpuRequirement.MinimumMemoryMiB) {
+        throw "$($gpuRequirement.Name) reports only $memoryMiB MiB; expected at least $($gpuRequirement.MinimumMemoryMiB) MiB."
     }
-    $a6000Found = $true
+    $compatibleGpuFound = $true
     Write-Host "Remote GPU: $($columns[0].Trim()), driver $driverVersion, $memoryMiB MiB"
 }
-if (-not $a6000Found) {
-    throw "No RTX A6000 with at least 45000 MiB was found on $SshTarget. GPUs: $($gpuRows -join '; ')"
+if (-not $compatibleGpuFound) {
+    throw "No $($gpuRequirement.Name) with at least $($gpuRequirement.MinimumMemoryMiB) MiB was found on $SshTarget. GPUs: $($gpuRows -join '; ')"
 }
 
 $tempRoot = Join-Path ([System.IO.Path]::GetTempPath()) (
@@ -140,8 +157,33 @@ try {
         [System.IO.File]::WriteAllText($configPath, $configText, $utf8NoBom)
     }
 
-    Compress-Archive -Path (Join-Path $packageRoot "*") `
-        -DestinationPath $archivePath -CompressionLevel Optimal
+    Add-Type -AssemblyName System.IO.Compression
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    $archive = [System.IO.Compression.ZipFile]::Open(
+        $archivePath,
+        [System.IO.Compression.ZipArchiveMode]::Create
+    )
+    try {
+        foreach ($file in Get-ChildItem -LiteralPath $packageRoot -File -Recurse) {
+            if ($file.FullName -match '[\\/](?:__pycache__|\.venv)[\\/]') {
+                continue
+            }
+            if ($file.Extension -eq ".pyc") {
+                continue
+            }
+            $entryName = $file.FullName.Substring($packageRoot.Length).
+                TrimStart([char[]]@('\', '/')) -replace '\\', '/'
+            [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile(
+                $archive,
+                $file.FullName,
+                $entryName,
+                [System.IO.Compression.CompressionLevel]::Optimal
+            ) | Out-Null
+        }
+    }
+    finally {
+        $archive.Dispose()
+    }
 
     $bootstrap = @'
 #!/usr/bin/env bash
@@ -149,6 +191,8 @@ set -euo pipefail
 
 RELEASE_DIR="${1:?release directory is required}"
 REMOTE_PYTHON="${2:-python3.11}"
+SHARD="${3:?benchmark shard is required}"
+GPU_PROFILE="${4:?GPU profile is required}"
 ARCHIVE="$RELEASE_DIR/sfmpe-benchmark.zip"
 PROJECT="$RELEASE_DIR/project"
 VENV="$PROJECT/.venv"
@@ -162,7 +206,9 @@ PYTHON="$VENV/bin/python"
 "$PYTHON" -m pip install --index-url https://download.pytorch.org/whl/cu128 torch
 "$PYTHON" -m pip install -e "$PROJECT"
 
-"$PYTHON" - <<'PY'
+GPU_PROFILE="$GPU_PROFILE" "$PYTHON" - <<'PY'
+import os
+
 import torch
 
 if torch.version.cuda != "12.8":
@@ -171,20 +217,30 @@ if not torch.cuda.is_available():
     raise SystemExit("PyTorch cannot initialize CUDA on this server")
 
 matches = []
+gpu_profiles = {
+    "RTXA6000": ("RTX A6000", 8, 6, 45_000_000_000),
+    "RTXA4000": ("RTX A4000", 8, 6, 14_000_000_000),
+}
+profile = os.environ["GPU_PROFILE"]
+try:
+    expected_name, major, minor, minimum_memory = gpu_profiles[profile]
+except KeyError:
+    raise SystemExit(f"Unsupported GPU profile: {profile!r}") from None
+
 for index in range(torch.cuda.device_count()):
     properties = torch.cuda.get_device_properties(index)
     capability = torch.cuda.get_device_capability(index)
     if (
-        "RTX A6000" in properties.name
-        and capability == (8, 6)
-        and properties.total_memory >= 45_000_000_000
+        expected_name in properties.name
+        and capability == (major, minor)
+        and properties.total_memory >= minimum_memory
     ):
         matches.append((index, properties, capability))
 
 if not matches:
     raise SystemExit(
-        "CUDA is available, but no 48 GB RTX A6000 (compute capability 8.6) "
-        "was detected by PyTorch"
+        f"CUDA is available, but no {expected_name} with compute capability "
+        f"{(major, minor)} and at least {minimum_memory} bytes was detected by PyTorch"
     )
 
 for index, properties, capability in matches:
@@ -197,9 +253,38 @@ for index, properties, capability in matches:
 PY
 
 echo "Deployment ready at: $PROJECT"
-echo "Run from that directory:"
-echo "  .venv/bin/python notebooks/benchmark_kaggle_standalone.py --schedule configs/benchmark_schedule.yaml --shard sir-sfmpe --device cuda"
-echo "  .venv/bin/python notebooks/benchmark_kaggle_standalone.py --schedule configs/benchmark_schedule.yaml --shard stochvol-sfmpe --device cuda"
+LOG_FILE="$RELEASE_DIR/$SHARD.log"
+PID_FILE="$RELEASE_DIR/$SHARD.pid"
+STATUS_FILE="$RELEASE_DIR/$SHARD.exit-code"
+rm -f "$PID_FILE" "$STATUS_FILE"
+STATUS_FILE="$STATUS_FILE" nohup bash -c '
+set +e
+"$@"
+status=$?
+printf "%s\n" "$status" > "$STATUS_FILE"
+exit "$status"
+' bash "$PYTHON" notebooks/benchmark_kaggle_standalone.py \
+    --schedule configs/benchmark_schedule.yaml \
+    --shard "$SHARD" \
+    --device cuda > "$LOG_FILE" 2>&1 < /dev/null &
+BENCHMARK_PID=$!
+printf "%s\n" "$BENCHMARK_PID" > "$PID_FILE"
+sleep 5
+if [ -f "$STATUS_FILE" ]; then
+    STATUS="$(cat "$STATUS_FILE")"
+    if [ "$STATUS" -ne 0 ]; then
+        cat "$LOG_FILE"
+        exit "$STATUS"
+    fi
+    echo "Benchmark shard $SHARD completed successfully."
+elif kill -0 "$BENCHMARK_PID" 2>/dev/null; then
+    echo "Benchmark shard $SHARD is running with PID $BENCHMARK_PID."
+else
+    cat "$LOG_FILE"
+    exit 1
+fi
+echo "Benchmark log: $LOG_FILE"
+echo "Benchmark exit status file: $STATUS_FILE"
 '@
     [System.IO.File]::WriteAllText(
         $bootstrapPath,
@@ -220,14 +305,16 @@ echo "  .venv/bin/python notebooks/benchmark_kaggle_standalone.py --schedule con
         throw "Could not transfer the benchmark bundle to $remoteDestination."
     }
 
-    $remoteBootstrapCommand = "bash $remoteReleaseDirectory/bootstrap.sh $remoteReleaseDirectory $RemotePython"
+    $remoteBootstrapCommand = "bash $remoteReleaseDirectory/bootstrap.sh $remoteReleaseDirectory $RemotePython $Shard $GpuProfile"
     & ssh $SshTarget $remoteBootstrapCommand
     if ($LASTEXITCODE -ne 0) {
-        throw "Remote installation or CUDA verification failed."
+        throw "Remote installation, CUDA verification, or shard '$Shard' failed."
     }
 
-    Write-Host "Deployment and CUDA verification succeeded."
+    Write-Host "Deployment and CUDA verification succeeded; shard '$Shard' was launched."
     Write-Host "Remote project: $remoteReleaseDirectory/project"
+    Write-Host "Benchmark shard: $Shard"
+    Write-Host "GPU profile: $GpuProfile"
     Write-Host "max_prior_draws in the bundled SIR and StochVol configs: $MaxPriorDraws"
 }
 finally {
