@@ -42,7 +42,7 @@ proposal:
   params:
     # Central marginal mass used for the axis-aligned region around posterior
     # samples; proposals are drawn from the prior conditional on this region.
-    quantile: 0.5
+    quantile: 0.9
     region_samples: 2048
     padding: 0.1
     max_prior_draws: 1000000000

@@ -14,9 +14,7 @@ param(
     [string]$Shard = "all-tasks-sfmpe",
 
     [ValidateSet("RTXA6000", "RTXA4000")]
-    [string]$GpuProfile = "RTXA6000",
-
-    [long]$MaxPriorDraws = 10000000
+    [string]$GpuProfile = "RTXA6000"
 )
 
 $ErrorActionPreference = "Stop"
@@ -25,10 +23,6 @@ if ($RemoteDirectory -notmatch '^/[A-Za-z0-9._/-]+$' -or
     $RemoteDirectory -match '(^|/)\.\.(/|$)') {
     throw "RemoteDirectory must be an absolute Linux path without spaces or '..' segments."
 }
-if ($MaxPriorDraws -lt 1) {
-    throw "MaxPriorDraws must be positive."
-}
-
 foreach ($toolName in @("ssh", "scp")) {
     if (-not (Get-Command $toolName -ErrorAction SilentlyContinue)) {
         throw "Required command '$toolName' was not found. Install/enable Windows OpenSSH Client."
@@ -135,28 +129,6 @@ try {
     Copy-Item -LiteralPath (Join-Path $codeRoot "pyproject.toml") `
         -Destination $packageRoot -Force
 
-    $utf8NoBom = [System.Text.UTF8Encoding]::new($false)
-    foreach ($configName in @(
-        "sfmpe_benchmark_sir.yaml",
-        "sfmpe_benchmark_stochvol.yaml"
-    )) {
-        $configPath = Join-Path (Join-Path $packageRoot "configs") $configName
-        $configText = [System.IO.File]::ReadAllText($configPath)
-        $pattern = '(?m)^([ \t]*max_prior_draws:[ \t]*)\d+([ \t]*(?:#.*)?)$'
-        $matches = [regex]::Matches($configText, $pattern)
-        if ($matches.Count -ne 1) {
-            throw "Expected one max_prior_draws entry in bundled $configName; found $($matches.Count)."
-        }
-        $match = $matches[0]
-        $replacement = $match.Groups[1].Value +
-            $MaxPriorDraws.ToString() +
-            $match.Groups[2].Value
-        $configText = $configText.Substring(0, $match.Index) +
-            $replacement +
-            $configText.Substring($match.Index + $match.Length)
-        [System.IO.File]::WriteAllText($configPath, $configText, $utf8NoBom)
-    }
-
     Add-Type -AssemblyName System.IO.Compression
     Add-Type -AssemblyName System.IO.Compression.FileSystem
     $archive = [System.IO.Compression.ZipFile]::Open(
@@ -203,16 +175,13 @@ mkdir -p "$PROJECT"
 PYTHON="$VENV/bin/python"
 
 "$PYTHON" -m pip install --upgrade pip
-"$PYTHON" -m pip install --index-url https://download.pytorch.org/whl/cu128 torch
-"$PYTHON" -m pip install -e "$PROJECT"
+"$PYTHON" -m pip install numpy torch
 
 GPU_PROFILE="$GPU_PROFILE" "$PYTHON" - <<'PY'
 import os
 
 import torch
 
-if torch.version.cuda != "12.8":
-    raise SystemExit(f"Expected PyTorch CUDA 12.8, got {torch.version.cuda!r}")
 if not torch.cuda.is_available():
     raise SystemExit("PyTorch cannot initialize CUDA on this server")
 
@@ -253,6 +222,7 @@ for index, properties, capability in matches:
 PY
 
 echo "Deployment ready at: $PROJECT"
+cd "$PROJECT"
 LOG_FILE="$RELEASE_DIR/$SHARD.log"
 PID_FILE="$RELEASE_DIR/$SHARD.pid"
 STATUS_FILE="$RELEASE_DIR/$SHARD.exit-code"
@@ -315,7 +285,6 @@ echo "Benchmark exit status file: $STATUS_FILE"
     Write-Host "Remote project: $remoteReleaseDirectory/project"
     Write-Host "Benchmark shard: $Shard"
     Write-Host "GPU profile: $GpuProfile"
-    Write-Host "max_prior_draws in the bundled SIR and StochVol configs: $MaxPriorDraws"
 }
 finally {
     if (Test-Path -LiteralPath $tempRoot) {
